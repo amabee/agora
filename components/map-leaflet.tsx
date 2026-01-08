@@ -1,23 +1,24 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Map,
   MapMarker,
   MapPopup,
   MapTileLayer,
   MapZoomControl,
-} from "@/components/ui/map"
-import type { Map as LeafletMap } from "leaflet"
+} from "@/components/ui/map";
+import type { Map as LeafletMap } from "leaflet";
 
 interface Room {
-  id: string
-  name: string
-  type: "text" | "video" | "text-video"
-  participants: number
-  lat: number
-  lng: number
-  active: boolean
+  id: string;
+  name: string;
+  type: "text" | "video" | "text-video";
+  participants: number;
+  lat: number;
+  lng: number;
+  active: boolean;
 }
 
 const ROOM_LOCATIONS: Room[] = [
@@ -66,66 +67,101 @@ const ROOM_LOCATIONS: Room[] = [
     lng: -73.968,
     active: false,
   },
-]
+  {
+   id: "room-6",
+    name: "Nice Channel",
+    type: "text-video",
+    participants: 800,
+    lat: 8.469353814083625,
+    lng: 124.58903109187337,
+    active: true,
+  },
+];
 
 interface MapProps {
-  selectedRoom: string | null
-  onSelectRoom: (roomId: string) => void
+  selectedRoom: string | null;
+  onSelectRoom: (roomId: string) => void;
 }
 
 export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
-  const mapRef = useRef<LeafletMap>(null)
-  
+  const mapRef = useRef<LeafletMap>(null);
+  const router = useRouter();
+
   // Calculate center of all rooms
-  const centerLat = ROOM_LOCATIONS.reduce((sum, room) => sum + room.lat, 0) / ROOM_LOCATIONS.length
-  const centerLng = ROOM_LOCATIONS.reduce((sum, room) => sum + room.lng, 0) / ROOM_LOCATIONS.length
+  const centerLat =
+    ROOM_LOCATIONS.reduce((sum, room) => sum + room.lat, 0) /
+    ROOM_LOCATIONS.length;
+  const centerLng =
+    ROOM_LOCATIONS.reduce((sum, room) => sum + room.lng, 0) /
+    ROOM_LOCATIONS.length;
 
   // Update map view when selected room changes
   useEffect(() => {
     if (selectedRoom && mapRef.current) {
-      const room = ROOM_LOCATIONS.find((r) => r.id === selectedRoom)
+      const room = ROOM_LOCATIONS.find((r) => r.id === selectedRoom);
       if (room) {
-        mapRef.current.setView([room.lat, room.lng], 14, { animate: true })
+        mapRef.current.setView([room.lat, room.lng], 14, { animate: true });
       }
     }
-  }, [selectedRoom])
+  }, [selectedRoom]);
 
   const getMarkerIcon = (type: string, isSelected: boolean) => {
-    let color: string
+    let color: string;
     switch (type) {
       case "text":
-        color = "#6366f1" // blue-500
-        break
+        color = "#6366f1"; // blue-500
+        break;
       case "video":
-        color = "#a855f7" // purple-500
-        break
+        color = "#a855f7"; // purple-500
+        break;
       case "text-video":
-        color = "#10b981" // green-500
-        break
+        color = "#10b981"; // green-500
+        break;
       default:
-        color = "#64748b" // slate-500
+        color = "#64748b"; // slate-500
     }
 
-    const size = isSelected ? 32 : 24
+    const size = isSelected ? 32 : 24;
 
     return (
-      <div style={{ position: 'relative', width: size, height: size }}>
-        <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="10" fill={color} stroke="white" strokeWidth="2" opacity="0.9"/>
+      <div style={{ position: "relative", width: size, height: size }}>
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill={color}
+            stroke="white"
+            strokeWidth="2"
+            opacity="0.9"
+          />
           {isSelected && (
-            <circle cx="12" cy="12" r="11" fill="none" stroke={color} strokeWidth="2" opacity="0.5"/>
+            <circle
+              cx="12"
+              cy="12"
+              r="11"
+              fill="none"
+              stroke={color}
+              strokeWidth="2"
+              opacity="0.5"
+            />
           )}
         </svg>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className="w-full h-full flex flex-col">
       <div className="flex-1 relative">
-        <Map 
+        <Map
           ref={mapRef}
-          center={[centerLat, centerLng]} 
+          center={[centerLat, centerLng]}
           zoom={12}
           className="w-full h-full"
         >
@@ -143,29 +179,57 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
               }}
             >
               <MapPopup>
-                <div className="p-2 min-w-[200px]">
-                  <h3 className="font-semibold text-base mb-2">{room.name}</h3>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-gray-600">
-                      👥 <span className="font-medium">{room.participants}</span> participants
-                    </p>
-                    <p className="text-gray-600">
-                      {room.type === "text"
-                        ? "💬 Text only"
-                        : room.type === "video"
-                          ? "📹 Video only"
-                          : "💬📹 Chat & Video"}
-                    </p>
+                <div className="p-4 min-w-[260px]">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-bold text-lg leading-tight pr-2">{room.name}</h3>
                     <span
-                      className={`inline-block text-xs px-2 py-1 rounded mt-2 ${
+                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
                         room.active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-300 text-gray-700"
                       }`}
                     >
-                      {room.active ? "🟢 Active" : "⚫ Idle"}
+                      <span className={`w-1.5 h-1.5 rounded-full ${room.active ? "bg-white" : "bg-gray-600"}`} />
+                      {room.active ? "Active" : "Idle"}
                     </span>
                   </div>
+                  
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                        <span className="text-base">👥</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Participants</p>
+                        <p className="font-semibold text-sm">{room.participants.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                        <span className="text-base">
+                          {room.type === "text" ? "💬" : room.type === "video" ? "📹" : "📱"}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Room Type</p>
+                        <p className="font-semibold text-sm">
+                          {room.type === "text"
+                            ? "Text Chat"
+                            : room.type === "video"
+                            ? "Video Only"
+                            : "Chat & Video"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => router.push(`/${room.id}`)}
+                    className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Join Room
+                  </button>
                 </div>
               </MapPopup>
             </MapMarker>
@@ -189,5 +253,5 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -54,6 +54,13 @@ const ROOMS: Room[] = [
     participants: 3,
     active: false,
   },
+   {
+    id: "room-6",
+    name: "Nice Channel",
+    type: "text",
+    participants: 800,
+    active: true,
+  },
 ]
 
 export default function Page() {
@@ -86,7 +93,7 @@ export default function Page() {
       <div className="h-14 border-b border-border bg-card px-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h2 className="font-semibold text-foreground">
-            {selectedRoomData ? `${selectedRoomData.name}` : "AGORA - "}
+            {selectedRoomData ? `${selectedRoomData.name}` : "AGORA - Discover chats on the map"}
           </h2>
         </div>
         <div className="flex items-center gap-2">
