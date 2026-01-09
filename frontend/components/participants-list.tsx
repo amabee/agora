@@ -1,26 +1,12 @@
 "use client"
 
-interface Participant {
-  id: string
-  name: string
-  avatar: string
-  status: "online" | "away" | "offline"
-  joinedAt: string
-}
-
-const PARTICIPANTS: Participant[] = [
-  { id: "1", name: "You", avatar: "👤", status: "online", joinedAt: "10:00 AM" },
-  { id: "2", name: "Alex Chen", avatar: "👨‍💼", status: "online", joinedAt: "10:15 AM" },
-  { id: "3", name: "Jordan Kim", avatar: "👩‍💻", status: "online", joinedAt: "10:20 AM" },
-  { id: "4", name: "Casey Morgan", avatar: "👨‍🎨", status: "away", joinedAt: "10:25 AM" },
-  { id: "5", name: "Morgan Lee", avatar: "👩‍🔬", status: "offline", joinedAt: "10:30 AM" },
-]
-
-interface ParticipantsListProps {
-  roomId: string | null
-}
+import type { Participant } from "@/interfaces/Participant"
+import type { ParticipantsListProps } from "@/interfaces/ParticipantsListProps"
 
 export function ParticipantsList({ roomId }: ParticipantsListProps) {
+  // TODO: Fetch from backend API
+  const PARTICIPANTS: Participant[] = []
+  
   return (
     <div className="w-72 border-l border-border bg-card flex flex-col">
       <div className="p-4 border-b border-border">

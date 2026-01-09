@@ -5,15 +5,7 @@ import { ChatMessagesList } from "@/components/chat-messages-list"
 import { ChatInput } from "@/components/chat-input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { Message } from "@/components/chat-message"
-
-interface FloatingChatProps {
-  messages: Message[]
-  onSendMessage: (content: string) => void
-  onReact: (messageId: string, emoji: string) => void
-  isOpen: boolean
-  onClose: () => void
-}
+import type { FloatingChatProps } from "@/interfaces/FloatingChatProps"
 
 export function FloatingChat({ messages, onSendMessage, onReact, isOpen, onClose }: FloatingChatProps) {
   const [isMinimized, setIsMinimized] = useState(false)

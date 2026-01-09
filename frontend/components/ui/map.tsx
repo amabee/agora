@@ -146,8 +146,8 @@ const LeafletMarkerClusterGroup = dynamic(
 ) as ComponentType<MarkerClusterGroupProps>
 
 function Map({
-    zoom = 15,
-    maxZoom = 18,
+    zoom = 12,
+    maxZoom = 12,
     className,
     ...props
 }: Omit<MapContainerProps, "zoomControl"> & {

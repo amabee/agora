@@ -10,92 +10,29 @@ import {
   MapZoomControl,
 } from "@/components/ui/map";
 import type { Map as LeafletMap } from "leaflet";
+import type { Room } from "@/interfaces/Room";
+import type { MapLeafletProps } from "@/interfaces/MapLeafletProps";
 
-interface Room {
-  id: string;
-  name: string;
-  type: "text" | "video" | "text-video";
-  participants: number;
-  lat: number;
-  lng: number;
-  active: boolean;
-}
+// TODO: Fetch from backend API
+const ROOM_LOCATIONS: Room[] = [];
 
-const ROOM_LOCATIONS: Room[] = [
-  {
-    id: "room-1",
-    name: "Downtown Coffee",
-    type: "text-video",
-    participants: 8,
-    lat: 40.7128,
-    lng: -74.006,
-    active: true,
-  },
-  {
-    id: "room-2",
-    name: "Park Discussion",
-    type: "text",
-    participants: 12,
-    lat: 40.7829,
-    lng: -73.9654,
-    active: true,
-  },
-  {
-    id: "room-3",
-    name: "Studio Session",
-    type: "video",
-    participants: 5,
-    lat: 40.7505,
-    lng: -73.9972,
-    active: false,
-  },
-  {
-    id: "room-4",
-    name: "Community Center",
-    type: "text-video",
-    participants: 15,
-    lat: 40.7614,
-    lng: -73.9776,
-    active: true,
-  },
-  {
-    id: "room-5",
-    name: "Quiet Corner",
-    type: "text",
-    participants: 3,
-    lat: 40.7489,
-    lng: -73.968,
-    active: false,
-  },
-  {
-   id: "room-6",
-    name: "Nice Channel",
-    type: "text-video",
-    participants: 800,
-    lat: 8.469353814083625,
-    lng: 124.58903109187337,
-    active: true,
-  },
-];
-
-interface MapProps {
-  selectedRoom: string | null;
-  onSelectRoom: (roomId: string) => void;
-}
-
-export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
+export function MapLeaflet({ selectedRoom, onSelectRoom }: MapLeafletProps) {
   const mapRef = useRef<LeafletMap>(null);
   const router = useRouter();
   const [showLabels, setShowLabels] = useState(false);
   const [labelPositions, setLabelPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
 
-  // Calculate center of all rooms
+  // Calculate center of all rooms (default to a location if no rooms)
   const centerLat =
-    ROOM_LOCATIONS.reduce((sum, room) => sum + room.lat, 0) /
-    ROOM_LOCATIONS.length;
+    ROOM_LOCATIONS.length > 0
+      ? ROOM_LOCATIONS.reduce((sum, room) => sum + room.lat, 0) /
+        ROOM_LOCATIONS.length
+      : 14.5995; // Default to Philippines center
   const centerLng =
-    ROOM_LOCATIONS.reduce((sum, room) => sum + room.lng, 0) /
-    ROOM_LOCATIONS.length;
+    ROOM_LOCATIONS.length > 0
+      ? ROOM_LOCATIONS.reduce((sum, room) => sum + room.lng, 0) /
+        ROOM_LOCATIONS.length
+      : 120.9842;
 
   // Check zoom level and update labels
   useEffect(() => {
@@ -201,6 +138,7 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
           ref={mapRef}
           center={[centerLat, centerLng]}
           zoom={12}
+          minZoom={5}
           className="w-full h-full"
         >
           <MapTileLayer />

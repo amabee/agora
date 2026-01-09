@@ -10,43 +10,9 @@ interface Message {
   timestamp: string
 }
 
-const MESSAGES: Message[] = [
-  {
-    id: "1",
-    user: "Alex Chen",
-    avatar: "👨‍💼",
-    text: "Hey everyone! Just joined the room.",
-    timestamp: "10:23 AM",
-  },
-  {
-    id: "2",
-    user: "Jordan Kim",
-    avatar: "👩‍💻",
-    text: "Welcome! We were just discussing the new project.",
-    timestamp: "10:24 AM",
-  },
-  {
-    id: "3",
-    user: "Casey Morgan",
-    avatar: "👨‍🎨",
-    text: "The design direction looks great so far.",
-    timestamp: "10:25 AM",
-  },
-  {
-    id: "4",
-    user: "Alex Chen",
-    avatar: "👨‍💼",
-    text: "Thanks! I focused on the user experience flow.",
-    timestamp: "10:26 AM",
-  },
-]
-
-interface ChatAreaProps {
-  roomId: string | null
-}
-
 export function ChatArea({ roomId }: ChatAreaProps) {
-  const [messages, setMessages] = useState<Message[]>(MESSAGES)
+  // TODO: Fetch from backend API
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
 
   const handleSend = () => {
@@ -98,7 +64,7 @@ export function ChatArea({ roomId }: ChatAreaProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Type a message..."
             className="flex-1 px-4 py-2 rounded-lg bg-background border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
           />

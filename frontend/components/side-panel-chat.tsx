@@ -5,20 +5,10 @@ import { ChatMessagesList } from "@/components/chat-messages-list"
 import { ChatInput } from "@/components/chat-input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { Message } from "@/components/chat-message"
-import type { Participant } from "@/components/chat-participants-panel"
+import type { Message } from "@/interfaces/Message"
+import type { Participant } from "@/interfaces/Participant"
+import type { SidePanelChatProps } from "@/interfaces/SidePanelChatProps"
 
-interface SidePanelChatProps {
-  messages: Message[]
-  participants?: Participant[]
-  onSendMessage: (content: string) => void
-  onReact: (messageId: string, emoji: string) => void
-  isOpen: boolean
-  onClose: () => void
-  participantCount: number
-  defaultTab?: "chat" | "participants"
-  onTabChange?: (tab: "chat" | "participants") => void
-}
 
 export function SidePanelChat({
   messages,

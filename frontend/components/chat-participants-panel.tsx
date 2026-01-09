@@ -3,21 +3,8 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import type { ChatParticipantsPanelProps } from "@/interfaces/ChatParticipantsPanelProps"
 
-export interface Participant {
-  id: string
-  username: string
-  avatar?: string
-  isOnline: boolean
-  isTyping?: boolean
-  role?: "admin" | "moderator" | "member"
-}
-
-interface ChatParticipantsPanelProps {
-  participants: Participant[]
-  isOpen: boolean
-  onClose: () => void
-}
 
 export function ChatParticipantsPanel({
   participants,

@@ -3,12 +3,7 @@
 import { useState, useRef, KeyboardEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-interface ChatInputProps {
-  onSendMessage: (content: string) => void
-  placeholder?: string
-  disabled?: boolean
-}
+import type { ChatInputProps } from "@/interfaces/ChatInputProps"
 
 export function ChatInput({
   onSendMessage,

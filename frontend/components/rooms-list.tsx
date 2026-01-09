@@ -1,57 +1,12 @@
 "use client"
 
-interface Room {
-  id: string
-  name: string
-  type: "text" | "video" | "text-video"
-  participants: number
-  active: boolean
-}
-
-const ROOMS: Room[] = [
-  {
-    id: "room-1",
-    name: "Downtown Coffee",
-    type: "text-video",
-    participants: 8,
-    active: true,
-  },
-  {
-    id: "room-2",
-    name: "Park Discussion",
-    type: "text",
-    participants: 12,
-    active: true,
-  },
-  {
-    id: "room-3",
-    name: "Studio Session",
-    type: "video",
-    participants: 5,
-    active: false,
-  },
-  {
-    id: "room-4",
-    name: "Community Center",
-    type: "text-video",
-    participants: 15,
-    active: true,
-  },
-  {
-    id: "room-5",
-    name: "Quiet Corner",
-    type: "text",
-    participants: 3,
-    active: false,
-  },
-]
-
-interface RoomsListProps {
-  selectedRoom: string | null
-  onSelectRoom: (roomId: string) => void
-}
+import type { Room } from "@/interfaces/Room";
+import type { RoomsListProps } from "@/interfaces/RoomsListProps";
 
 export function RoomsList({ selectedRoom, onSelectRoom }: RoomsListProps) {
+  // TODO: Fetch from backend API
+  const ROOMS: Room[] = []
+  
   const getTypeLabel = (type: string) => {
     switch (type) {
       case "text":

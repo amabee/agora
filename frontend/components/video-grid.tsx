@@ -3,23 +3,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { VideoParticipant } from "@/interfaces/VideoParticipant";
+import type { VideoGridProps } from "@/interfaces/VideoGridProps";
 
-export interface VideoParticipant {
-  id: string;
-  username: string;
-  avatar?: string;
-  isMuted: boolean;
-  isVideoOff: boolean;
-  isSpeaking?: boolean;
-  isPinned?: boolean;
-  hasVideo?: boolean;
-}
-
-interface VideoGridProps {
-  participants: VideoParticipant[];
-  localUserId?: string;
-  participantsPerPage?: number;
-}
+export type { VideoParticipant };
 
 export function VideoGrid({
   participants,

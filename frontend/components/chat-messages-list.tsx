@@ -1,14 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChatMessage, type Message } from "./chat-message"
+import { ChatMessage } from "./chat-message"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import type { ChatMessagesListProps } from "@/interfaces/ChatMessagesListProps"
 
-interface ChatMessagesListProps {
-  messages: Message[]
-  onReact?: (messageId: string, emoji: string) => void
-}
 
 export function ChatMessagesList({ messages, onReact }: ChatMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)

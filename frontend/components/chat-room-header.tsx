@@ -3,14 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-
-interface ChatRoomHeaderProps {
-  roomName: string
-  roomType: "text" | "video" | "text-video"
-  participantCount: number
-  onToggleParticipants?: () => void
-  onLeaveRoom?: () => void
-}
+import type { ChatRoomHeaderProps } from "@/interfaces/ChatRoomHeaderProps"
 
 export function ChatRoomHeader({
   roomName,
