@@ -13,10 +13,7 @@ import type { Map as LeafletMap } from "leaflet";
 import type { Room } from "@/interfaces/Room";
 import type { MapLeafletProps } from "@/interfaces/MapLeafletProps";
 
-// TODO: Fetch from backend API
-const ROOM_LOCATIONS: Room[] = [];
-
-export function MapLeaflet({ selectedRoom, onSelectRoom }: MapLeafletProps) {
+export function MapLeaflet({ rooms, selectedRoom, onSelectRoom }: MapLeafletProps) {
   const mapRef = useRef<LeafletMap>(null);
   const router = useRouter();
   const [showLabels, setShowLabels] = useState(false);
@@ -24,14 +21,14 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapLeafletProps) {
 
   // Calculate center of all rooms (default to a location if no rooms)
   const centerLat =
-    ROOM_LOCATIONS.length > 0
-      ? ROOM_LOCATIONS.reduce((sum, room) => sum + room.lat, 0) /
-        ROOM_LOCATIONS.length
+    rooms.length > 0
+      ? rooms.reduce((sum, room) => sum + room.lat, 0) /
+        rooms.length
       : 14.5995; // Default to Philippines center
   const centerLng =
-    ROOM_LOCATIONS.length > 0
-      ? ROOM_LOCATIONS.reduce((sum, room) => sum + room.lng, 0) /
-        ROOM_LOCATIONS.length
+    rooms.length > 0
+      ? rooms.reduce((sum, room) => sum + room.lng, 0) /
+        rooms.length
       : 120.9842;
 
   // Check zoom level and update labels
@@ -47,7 +44,7 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapLeafletProps) {
 
       // Update label positions
       const positions: { [key: string]: { x: number; y: number } } = {};
-      ROOM_LOCATIONS.forEach((room) => {
+      rooms.forEach((room) => {
         const point = map.latLngToContainerPoint([room.lat, room.lng]);
         positions[room.id] = { x: point.x, y: point.y };
       });
@@ -68,17 +65,17 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapLeafletProps) {
       map.off('zoomend', updateLabels);
       map.off('moveend', updateLabels);
     };
-  }, []);
+  }, [rooms]);
 
   // Update map view when selected room changes
   useEffect(() => {
     if (selectedRoom && mapRef.current) {
-      const room = ROOM_LOCATIONS.find((r) => r.id === selectedRoom);
+      const room = rooms.find((r) => r.id === selectedRoom);
       if (room) {
         mapRef.current.setView([room.lat, room.lng], 14, { animate: true });
       }
     }
-  }, [selectedRoom]);
+  }, [selectedRoom, rooms]);
 
   const getMarkerIcon = (type: string, isSelected: boolean) => {
     let color: string;
@@ -144,7 +141,7 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapLeafletProps) {
           <MapTileLayer />
           <MapZoomControl />
 
-          {ROOM_LOCATIONS.map((room) => (
+          {rooms.map((room) => (
             <MapMarker
               key={room.id}
               position={[room.lat, room.lng]}
@@ -215,7 +212,7 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapLeafletProps) {
         {/* Channel name labels on zoom */}
         {showLabels && (
           <div className="absolute inset-0 pointer-events-none z-50">
-            {ROOM_LOCATIONS.map((room) => {
+            {rooms.map((room) => {
               const pos = labelPositions[room.id];
               if (!pos) return null;
 

@@ -3,10 +3,11 @@ import fp from "fastify-plugin";
 import { config } from "../config/index.js";
 
 async function corsPlugin(app) {
-  const origins = config.cors?.origin || ["http://192.168.1.3:3000"];
+  const origins = config.cors?.origin || ["http://192.168.1.8:3000/"];
 
   app.register(cors, {
     origin: (origin, callback) => {
+      // Allow requests with no origin (Postman, curl, server-to-server)
       if (!origin) {
         return callback(null, true);
       }

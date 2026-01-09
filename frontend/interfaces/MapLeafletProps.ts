@@ -1,4 +1,7 @@
+import type { Room } from "./Room";
+
 export interface MapLeafletProps {
-  selectedRoom: string | null
-  onSelectRoom: (roomId: string) => void
+  rooms: Room[];
+  selectedRoom: string | null;
+  onSelectRoom: (roomId: string) => void;
 }

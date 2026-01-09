@@ -1,6 +1,8 @@
 export const config = {
   cors: {
-    origin: ["http://192.168.1.3:3000", "http://localhost:3000"]
+    origin: process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : ["http://localhost:3000", "http://192.168.1.8:3000"]
   },
   db: {
     host: process.env.DB_HOST || "localhost",

@@ -70,7 +70,18 @@ export const roomService = {
     ];
 
     const result = await query(sql, params);
-    return await this.getRoomById(result.insertId);
+    const roomId = result.insertId;
+
+    // Automatically add creator as room member with owner role
+    if (roomData.created_by) {
+      const memberSql = `
+        INSERT INTO room_members (room_id, user_id, role)
+        VALUES (?, ?, 'owner')
+      `;
+      await query(memberSql, [roomId, roomData.created_by]);
+    }
+
+    return await this.getRoomById(roomId);
   },
 
   // Update room

@@ -12,13 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { UsernameModal } from "@/components/username-modal";
 import { AddRoomModal } from "@/components/add-room-modal";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
+import { useRooms, useCreateRoom } from "@/hooks/useRooms";
 import type { Room } from "@/interfaces/Room";
 
-const ROOMS: Room[] = [];
-
 export default function Page() {
-  const [rooms, setRooms] = useState<Room[]>(ROOMS);
+  const { data: rooms = [], isLoading } = useRooms();
+  const createRoom = useCreateRoom();
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -27,24 +27,18 @@ export default function Page() {
 
   const handleAddRoom = (newRoom: {
     name: string;
+    description?: string;
     type: "text" | "video" | "text-video";
     password?: string;
     lat: number;
     lng: number;
   }) => {
-    const room: Room = {
-      id: `room-${Date.now()}`,
-      name: newRoom.name,
-      type: newRoom.type,
-      participants: 0,
-      password_protected: false,
-      active: true,
-      password: newRoom.password,
-      lat: newRoom.lat,
-      lng: newRoom.lng,
-    };
-    setRooms([...rooms, room]);
-    setSelectedRoom(room.id);
+    createRoom.mutate(newRoom, {
+      onSuccess: (createdRoom) => {
+        setSelectedRoom(createdRoom.id);
+        setAddRoomModalOpen(false);
+      },
+    });
   };
 
   const filteredRooms = rooms.filter((room) =>
@@ -115,9 +109,14 @@ export default function Page() {
                   />
                 </div>
                 <div className="max-h-96 overflow-y-auto scrollbar-thin">
-                  {filteredRooms.length === 0 ? (
+                  {isLoading ? (
+                    <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Loading rooms...
+                    </div>
+                  ) : filteredRooms.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">
-                      No rooms found
+                      {searchQuery ? "No rooms found" : "No rooms available"}
                     </div>
                   ) : (
                     filteredRooms.map((room) => (
@@ -180,6 +179,7 @@ export default function Page() {
         {/* Main Content Area - Just the Map */}
         <div className="flex-1 overflow-hidden">
           <MapLeaflet
+            rooms={rooms}
             selectedRoom={selectedRoom}
             onSelectRoom={setSelectedRoom}
           />
