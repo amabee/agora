@@ -1,6 +1,12 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import env from "@fastify/env";
+import antibotPlugin from "./plugins/antibot-plugin.js";
+import corsPlugin from "./plugins/corsplugin.js";
+import helmet from "./plugins/helmet.js";
+import ratelimitPlugin from "./plugins/ratelimit-plugin.js";
+import requestTrackerPlugin from "./plugins/request-tracker-plugin.js";
+import roomRoutes from "./routes/room.routes.js";
 
 const app = Fastify({
   trustProxy: true,
@@ -46,10 +52,15 @@ async function start() {
       dotenv: true,
     });
 
-    // Register CORS
-    await app.register(cors, {
-      origin: true,
-    });
+    // CUSTOM PLUGINS HEHE 😆
+    await app.register(antibotPlugin);
+    await app.register(corsPlugin);
+    await app.register(helmet);
+    await app.register(ratelimitPlugin);
+    await app.register(requestTrackerPlugin);
+
+    // Routes
+    await app.register(roomRoutes);
 
     // Health check route
     app.get("/health", async (request, reply) => {
