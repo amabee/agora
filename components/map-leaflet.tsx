@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Map,
@@ -86,6 +86,8 @@ interface MapProps {
 export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
   const mapRef = useRef<LeafletMap>(null);
   const router = useRouter();
+  const [showLabels, setShowLabels] = useState(false);
+  const [labelPositions, setLabelPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
 
   // Calculate center of all rooms
   const centerLat =
@@ -94,6 +96,42 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
   const centerLng =
     ROOM_LOCATIONS.reduce((sum, room) => sum + room.lng, 0) /
     ROOM_LOCATIONS.length;
+
+  // Check zoom level and update labels
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+
+    const updateLabels = () => {
+      const zoom = map.getZoom();
+      // Always show for testing
+      setShowLabels(true);
+
+      // Update label positions
+      const positions: { [key: string]: { x: number; y: number } } = {};
+      ROOM_LOCATIONS.forEach((room) => {
+        const point = map.latLngToContainerPoint([room.lat, room.lng]);
+        positions[room.id] = { x: point.x, y: point.y };
+      });
+      setLabelPositions(positions);
+    };
+
+    map.on('zoom', updateLabels);
+    map.on('move', updateLabels);
+    map.on('zoomend', updateLabels);
+    map.on('moveend', updateLabels);
+    
+    // Give the map time to initialize
+    setTimeout(updateLabels, 500);
+
+    return () => {
+      map.off('zoom', updateLabels);
+      map.off('move', updateLabels);
+      map.off('zoomend', updateLabels);
+      map.off('moveend', updateLabels);
+    };
+  }, []);
 
   // Update map view when selected room changes
   useEffect(() => {
@@ -179,7 +217,7 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
               }}
             >
               <MapPopup>
-                <div className="p-4 min-w-[260px]">
+                <div className="p-4 min-w-65">
                   <div className="flex items-start justify-between mb-3">
                     <h3 className="font-bold text-lg leading-tight pr-2">{room.name}</h3>
                     <span
@@ -196,23 +234,23 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
                   
                   <div className="space-y-2.5">
                     <div className="flex items-center gap-2 text-sm">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
                         <span className="text-base">👥</span>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Participants</p>
+                        <p className="text-xs text-muted-foreground">Participants{" "} - {" "}</p>
                         <p className="font-semibold text-sm">{room.participants.toLocaleString()}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
                         <span className="text-base">
                           {room.type === "text" ? "💬" : room.type === "video" ? "📹" : "📱"}
                         </span>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Room Type</p>
+                        <p className="text-xs text-muted-foreground">Room Type {" "} - {" "}</p>
                         <p className="font-semibold text-sm">
                           {room.type === "text"
                             ? "Text Chat"
@@ -235,6 +273,29 @@ export function MapLeaflet({ selectedRoom, onSelectRoom }: MapProps) {
             </MapMarker>
           ))}
         </Map>
+
+        {/* Channel name labels on zoom */}
+        {showLabels && (
+          <div className="absolute inset-0 pointer-events-none z-50">
+            {ROOM_LOCATIONS.map((room) => {
+              const pos = labelPositions[room.id];
+              if (!pos) return null;
+
+              return (
+                <div
+                  key={`label-${room.id}`}
+                  className="absolute bg-red-500 text-white px-2 py-1 text-xs"
+                  style={{
+                    left: `${pos.x}px`,
+                    top: `${pos.y - 30}px`,
+                  }}
+                >
+                  {room.name}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Legend */}

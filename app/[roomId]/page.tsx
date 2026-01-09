@@ -190,8 +190,6 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     // TODO: Implement actual screen share logic
   }
 
-  const isVideoRoom = roomData.type === "video" || roomData.type === "text-video"
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -200,8 +198,68 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 
   return (
     <div className="h-screen bg-[#0f0f0f] overflow-hidden">
-      {isVideoRoom ? (
-        /* Video/Text-Video Room Layout */
+      {roomData.type === "video" ? (
+        /* Video Only Room Layout */
+        <div className="h-full flex flex-col">
+          {/* Top Header Bar */}
+          <div className="h-14 flex items-center justify-between px-4 bg-[#1a1a1a] border-b border-white/10 shrink-0">
+            {/* Left: Room Info */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                </svg>
+              </div>
+              <h1 className="text-white text-sm font-medium">{roomData.name}</h1>
+            </div>
+
+            {/* Right: Live Indicator & Timer */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                <span className="text-white text-xs font-semibold">LIVE</span>
+                <span className="text-white/80 text-xs">{formatTime(elapsedTime)}</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
+                ZS
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Area - Full Width Video */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 p-4 min-h-0 overflow-hidden">
+              <VideoGrid participants={videoParticipants} localUserId="current-user" />
+            </div>
+
+            {/* Bottom Controls */}
+            <VideoControls
+              onToggleMic={handleToggleMic}
+              onToggleVideo={handleToggleVideo}
+              onToggleScreenShare={handleToggleScreenShare}
+              onToggleChat={() => {}}
+              onToggleParticipants={() => setShowParticipants(!showParticipants)}
+              onLeaveCall={handleLeaveRoom}
+              isMicMuted={isMicMuted}
+              isVideoOff={isVideoOff}
+              isScreenSharing={isScreenSharing}
+              participantCount={participants.length}
+              messagesCount={0}
+              isChatOpen={false}
+              isParticipantsOpen={showParticipants}
+              isChatDisabled={true}
+            />
+          </div>
+
+          {/* Participants Panel */}
+          <ChatParticipantsPanel
+            participants={participants}
+            isOpen={showParticipants}
+            onClose={() => setShowParticipants(false)}
+          />
+        </div>
+      ) : roomData.type === "text-video" ? (
+        /* Text-Video Room Layout (Combined) */
         <div className="h-full flex flex-col">
           {/* Top Header Bar */}
           <div className="h-14 flex items-center justify-between px-4 bg-[#1a1a1a] border-b border-white/10 shrink-0">
