@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Map,
   MapMarker,
+  MapMarkerClusterGroup,
   MapPopup,
   MapTileLayer,
   MapZoomControl,
@@ -39,31 +40,37 @@ export function MapLeaflet({ rooms, selectedRoom, onSelectRoom }: MapLeafletProp
 
     const updateLabels = () => {
       const zoom = map.getZoom();
-      // Always show for testing
-      setShowLabels(true);
+      // Only show labels when zoomed in enough (15+)
+      setShowLabels(zoom >= 15);
 
-      // Update label positions
-      const positions: { [key: string]: { x: number; y: number } } = {};
-      rooms.forEach((room) => {
-        const point = map.latLngToContainerPoint([room.lat, room.lng]);
-        positions[room.id] = { x: point.x, y: point.y };
-      });
-      setLabelPositions(positions);
+      if (zoom >= 15) {
+        // Update label positions with debounce
+        const positions: { [key: string]: { x: number; y: number } } = {};
+        rooms.forEach((room) => {
+          const point = map.latLngToContainerPoint([room.lat, room.lng]);
+          positions[room.id] = { x: point.x, y: point.y };
+        });
+        setLabelPositions(positions);
+      }
     };
 
-    map.on('zoom', updateLabels);
-    map.on('move', updateLabels);
+    // Debounce the update function
+    let timeoutId: NodeJS.Timeout;
+    const debouncedUpdate = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateLabels, 100);
+    };
+
     map.on('zoomend', updateLabels);
-    map.on('moveend', updateLabels);
+    map.on('moveend', debouncedUpdate);
     
     // Give the map time to initialize
     setTimeout(updateLabels, 500);
 
     return () => {
-      map.off('zoom', updateLabels);
-      map.off('move', updateLabels);
+      clearTimeout(timeoutId);
       map.off('zoomend', updateLabels);
-      map.off('moveend', updateLabels);
+      map.off('moveend', debouncedUpdate);
     };
   }, [rooms]);
 
@@ -134,79 +141,91 @@ export function MapLeaflet({ rooms, selectedRoom, onSelectRoom }: MapLeafletProp
         <Map
           ref={mapRef}
           center={[centerLat, centerLng]}
-          zoom={12}
+          zoom={17}
           minZoom={5}
+          maxZoom={20}
           className="w-full h-full"
         >
           <MapTileLayer />
           <MapZoomControl />
 
-          {rooms.map((room) => (
-            <MapMarker
-              key={room.id}
-              position={[room.lat, room.lng]}
-              icon={getMarkerIcon(room.type, selectedRoom === room.id)}
-              iconAnchor={[12, 12]}
-              eventHandlers={{
-                click: () => onSelectRoom(room.id),
-              }}
-            >
-              <MapPopup>
-                <div className="p-4 min-w-65">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-bold text-lg leading-tight pr-2">{room.name}</h3>
-                    <span
-                      className={`shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
-                        room.active
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-300 text-gray-700"
-                      }`}
+          <MapMarkerClusterGroup
+            maxClusterRadius={50}
+            spiderfyOnMaxZoom={true}
+            showCoverageOnHover={false}
+            zoomToBoundsOnClick={true}
+            spiderfyDistanceMultiplier={2}
+            disableClusteringAtZoom={18}
+            icon={(count) => (
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white font-bold text-sm border-2 border-white shadow-lg">
+                {count}
+              </div>
+            )}
+          >
+            {rooms.map((room) => (
+              <MapMarker
+                key={room.id}
+                position={[room.lat, room.lng]}
+                icon={getMarkerIcon(room.type, selectedRoom === room.id)}
+                iconAnchor={[12, 12]}
+              >
+                <MapPopup>
+                  <div className="p-4 min-w-65">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-bold text-lg leading-tight pr-2">{room.name}</h3>
+                      <span
+                        className={`shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
+                          room.active
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-300 text-gray-700"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${room.active ? "bg-white" : "bg-gray-600"}`} />
+                        {room.active ? "Active" : "Idle"}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                          <span className="text-base">👥</span>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Participants{" "} - {" "}</p>
+                          <p className="font-semibold text-sm">{room.participants.toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                          <span className="text-base">
+                            {room.type === "text" ? "💬" : room.type === "video" ? "📹" : "📱"}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Room Type {" "} - {" "}</p>
+                          <p className="font-semibold text-sm">
+                            {room.type === "text"
+                              ? "Text Chat"
+                              : room.type === "video"
+                              ? "Video Only"
+                              : "Chat & Video"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => router.push(`/${room.id}`)}
+                      className="w-full mt-4 px-4 py-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${room.active ? "bg-white" : "bg-gray-600"}`} />
-                      {room.active ? "Active" : "Idle"}
-                    </span>
+                      Join Room
+                    </button>
                   </div>
-                  
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
-                        <span className="text-base">👥</span>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Participants{" "} - {" "}</p>
-                        <p className="font-semibold text-sm">{room.participants.toLocaleString()}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
-                        <span className="text-base">
-                          {room.type === "text" ? "💬" : room.type === "video" ? "📹" : "📱"}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Room Type {" "} - {" "}</p>
-                        <p className="font-semibold text-sm">
-                          {room.type === "text"
-                            ? "Text Chat"
-                            : room.type === "video"
-                            ? "Video Only"
-                            : "Chat & Video"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={() => router.push(`/${room.id}`)}
-                    className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    Join Room
-                  </button>
-                </div>
-              </MapPopup>
-            </MapMarker>
-          ))}
+                </MapPopup>
+              </MapMarker>
+            ))}
+          </MapMarkerClusterGroup>
         </Map>
 
         {/* Channel name labels on zoom */}
