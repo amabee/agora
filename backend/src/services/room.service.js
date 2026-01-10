@@ -2,7 +2,7 @@ import { query } from "../db/index.js";
 
 export const roomService = {
   // Get all rooms
-  async getAllRooms(filters = {}) {
+  async getAllRooms(filters = {}, limit = 10, offset = 0) {
     let sql = `
     SELECT 
       r.*, 
@@ -23,16 +23,77 @@ export const roomService = {
       params.push(filters.is_public);
     }
 
-    sql += " GROUP BY r.id ORDER BY r.created_at DESC";
+    sql += " GROUP BY r.id ORDER BY r.created_at DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
 
     return await query(sql, params);
   },
 
+  // Get total count of rooms
+  async getRoomsCount(filters = {}) {
+    let sql = "SELECT COUNT(DISTINCT r.id) as count FROM rooms r WHERE 1=1";
+    const params = [];
+
+    if (filters.type) {
+      sql += " AND r.type = ?";
+      params.push(filters.type);
+    }
+
+    if (filters.is_public !== undefined) {
+      sql += " AND r.is_public = ?";
+      params.push(filters.is_public);
+    }
+
+    const result = await query(sql, params);
+    return result[0].count;
+  },
+
   // Get room by ID
   async getRoomById(id) {
-    const sql = "SELECT * FROM rooms WHERE id = ?";
-    const results = await query(sql, [id]);
-    return results[0];
+    // Get basic room info
+    const roomSql = "SELECT * FROM rooms WHERE id = ?";
+    const roomResults = await query(roomSql, [id]);
+    
+    if (!roomResults || roomResults.length === 0) {
+      return null;
+    }
+    
+    const room = roomResults[0];
+    
+    // Get participants
+    const participantsSql = `
+      SELECT rm.*, u.username, u.last_active 
+      FROM room_members rm
+      JOIN users u ON rm.user_id = u.id
+      WHERE rm.room_id = ?
+      ORDER BY rm.joined_at DESC
+    `;
+    room.participants = await query(participantsSql, [id]);
+    room.participant_count = room.participants.length;
+    
+    // Get video sessions and participants if room type is video or mixed
+    if (room.type === 'video' || room.type === 'mixed') {
+      const videoSessionsSql = `
+        SELECT * FROM video_sessions 
+        WHERE room_id = ? 
+        ORDER BY started_at DESC
+      `;
+      room.video_sessions = await query(videoSessionsSql, [id]);
+      
+      // Get video participants for each session
+      for (let session of room.video_sessions) {
+        const videoParticipantsSql = `
+          SELECT vp.*, u.username 
+          FROM video_participants vp
+          JOIN users u ON vp.user_id = u.id
+          WHERE vp.video_session_id = ?
+          ORDER BY vp.joined_at DESC
+        `;
+        session.video_participants = await query(videoParticipantsSql, [session.id]);
+      }
+    }
+    
+    return room;
   },
 
   // Get rooms near location
@@ -150,5 +211,21 @@ export const roomService = {
       ORDER BY rm.joined_at ASC
     `;
     return await query(sql, [roomId]);
+  },
+
+  // Add room member
+  async addRoomMember(roomId, userId) {
+    const sql = `
+      INSERT INTO room_members (room_id, user_id, role)
+      VALUES (?, ?, 'member')
+      ON DUPLICATE KEY UPDATE joined_at = CURRENT_TIMESTAMP
+    `;
+    return await query(sql, [roomId, userId]);
+  },
+
+  // Remove room member
+  async removeRoomMember(roomId, userId) {
+    const sql = "DELETE FROM room_members WHERE room_id = ? AND user_id = ?";
+    return await query(sql, [roomId, userId]);
   },
 };

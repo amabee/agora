@@ -2,7 +2,8 @@ export interface Participant {
   id: string
   username: string
   avatar?: string
-  isOnline: boolean
+  isOnline?: boolean
   isTyping?: boolean
-  role?: "admin" | "moderator" | "member"
+  role?: "admin" | "moderator" | "member" | "owner"
+  joinedAt?: Date
 }

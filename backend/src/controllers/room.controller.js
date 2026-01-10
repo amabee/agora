@@ -4,14 +4,30 @@ export const roomController = {
   // GET /rooms
   async getAllRooms(request, reply) {
     try {
-      const { type, is_public } = request.query;
+      const { type, is_public, limit = 10, offset = 0 } = request.query;
       const filters = {};
 
       if (type) filters.type = type;
       if (is_public !== undefined) filters.is_public = parseInt(is_public);
 
-      const rooms = await roomService.getAllRooms(filters);
-      return reply.code(200).send({ success: true, data: rooms });
+      const rooms = await roomService.getAllRooms(
+        filters, 
+        parseInt(limit), 
+        parseInt(offset)
+      );
+      
+      const total = await roomService.getRoomsCount(filters);
+      
+      return reply.code(200).send({ 
+        success: true, 
+        data: rooms,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total,
+          hasMore: parseInt(offset) + rooms.length < total
+        }
+      });
     } catch (error) {
       request.log.error(error);
       return reply.code(500).send({ success: false, error: "Failed to fetch rooms" });
@@ -161,6 +177,75 @@ export const roomController = {
     } catch (error) {
       request.log.error(error);
       return reply.code(500).send({ success: false, error: "Failed to fetch room members" });
+    }
+  },
+
+  // POST /rooms/:id/join
+  async joinRoom(request, reply) {
+    try {
+      const { id } = request.params;
+      const { user_id } = request.body;
+
+      if (!user_id) {
+        return reply.code(400).send({ success: false, error: "user_id is required" });
+      }
+
+      // Check if room exists
+      const room = await roomService.getRoomById(id);
+      if (!room) {
+        return reply.code(404).send({ success: false, error: "Room not found" });
+      }
+
+      await roomService.addRoomMember(id, user_id);
+      return reply.code(200).send({ success: true, message: "Joined room successfully" });
+    } catch (error) {
+      request.log.error(error);
+      return reply.code(500).send({ success: false, error: "Failed to join room" });
+    }
+  },
+
+  // POST /rooms/:id/leave
+  async leaveRoom(request, reply) {
+    try {
+      const { id } = request.params;
+      const { user_id } = request.body;
+
+      if (!user_id) {
+        return reply.code(400).send({ success: false, error: "user_id is required" });
+      }
+
+      await roomService.removeRoomMember(id, user_id);
+      return reply.code(200).send({ success: true, message: "Left room successfully" });
+    } catch (error) {
+      request.log.error(error);
+      return reply.code(500).send({ success: false, error: "Failed to leave room" });
+    }
+  },
+
+  // POST /rooms/:id/verify-password
+  async verifyPassword(request, reply) {
+    try {
+      const { id } = request.params;
+      const { password } = request.body;
+
+      if (!password) {
+        return reply.code(400).send({ success: false, error: "password is required" });
+      }
+
+      const room = await roomService.getRoomById(id);
+      if (!room) {
+        return reply.code(404).send({ success: false, error: "Room not found" });
+      }
+
+      if (!room.is_password_protected) {
+        return reply.code(200).send({ success: true, valid: true });
+      }
+
+      const valid = room.password === password;
+      return reply.code(200).send({ success: true, valid });
+    } catch (error) {
+      request.log.error(error);
+      return reply.code(500).send({ success: false, error: "Failed to verify password" });
     }
   },
 };

@@ -7,4 +7,5 @@ export interface VideoParticipant {
   isSpeaking?: boolean
   isPinned?: boolean
   hasVideo?: boolean
+  isNew?: boolean
 }

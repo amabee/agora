@@ -18,7 +18,7 @@ export function ChatRoomHeader({
         return "💬"
       case "video":
         return "📹"
-      case "text-video":
+      case "mixed":
         return "💬📹"
     }
   }
@@ -29,7 +29,7 @@ export function ChatRoomHeader({
         return "Text Only"
       case "video":
         return "Video Only"
-      case "text-video":
+      case "mixed":
         return "Chat & Video"
     }
   }

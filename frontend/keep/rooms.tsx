@@ -4,7 +4,7 @@ export const MOCK_ROOMS = [
   {
     id: "room-1",
     name: "Downtown Coffee",
-    type: "text-video" as const,
+    type: "mixed" as const,
     participants: 8,
     active: true,
     password: undefined,
@@ -28,7 +28,7 @@ export const MOCK_ROOMS = [
   {
     id: "room-4",
     name: "Community Center",
-    type: "text-video" as const,
+    type: "mixed" as const,
     participants: 15,
     active: true,
     password: undefined,
@@ -56,7 +56,7 @@ export const MOCK_ROOM_LOCATIONS = [
   {
     id: "room-1",
     name: "Downtown Coffee",
-    type: "text-video" as const,
+    type: "mixed" as const,
     participants: 8,
     lat: 40.7128,
     lng: -74.006,
@@ -83,7 +83,7 @@ export const MOCK_ROOM_LOCATIONS = [
   {
     id: "room-4",
     name: "Community Center",
-    type: "text-video" as const,
+    type: "mixed" as const,
     participants: 15,
     lat: 40.7614,
     lng: -73.9776,
@@ -101,7 +101,7 @@ export const MOCK_ROOM_LOCATIONS = [
   {
    id: "room-6",
     name: "Nice Channel",
-    type: "text-video" as const,
+    type: "mixed" as const,
     participants: 800,
     lat: 8.469353814083625,
     lng: 124.58903109187337,

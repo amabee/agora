@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { MapLeaflet } from "@/components/map-leaflet";
 import {
   DropdownMenu,
@@ -12,23 +13,51 @@ import {
 import { Input } from "@/components/ui/input";
 import { UsernameModal } from "@/components/username-modal";
 import { AddRoomModal } from "@/components/add-room-modal";
+import { PasswordModal } from "@/components/password-modal";
 import { Plus, Loader2 } from "lucide-react";
-import { useRooms, useCreateRoom } from "@/hooks/useRooms";
+import { useRooms, useMapRooms, useCreateRoom } from "@/hooks/useRooms";
 import type { Room } from "@/interfaces/Room";
 
+const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+
 export default function Page() {
-  const { data: rooms = [], isLoading } = useRooms();
+  const router = useRouter();
+  
+  // Separate queries for dropdown (paginated) and map (all rooms)
+  const { 
+    data: dropdownData, 
+    isLoading: isDropdownLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useRooms();
+  
+  const { 
+    data: mapRooms, 
+    isLoading: isMapLoading 
+  } = useMapRooms();
+  
   const createRoom = useCreateRoom();
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [addRoomModalOpen, setAddRoomModalOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string>("");
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  const handleAddRoom = (newRoom: {
+  // Flatten dropdown pages into a single array (for dropdown infinite scroll)
+  const dropdownRooms = useMemo(() => 
+    dropdownData?.pages.flatMap(page => page.rooms) ?? [],
+    [dropdownData]
+  );
+
+  const handleAddRoom = useCallback((newRoom: {
     name: string;
     description?: string;
-    type: "text" | "video" | "text-video";
+    type: "text" | "video" | "mixed";
     password?: string;
     lat: number;
     lng: number;
@@ -39,27 +68,117 @@ export default function Page() {
         setAddRoomModalOpen(false);
       },
     });
-  };
+  }, [createRoom]);
 
-  const filteredRooms = rooms.filter((room) =>
-    room.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Memoize filtered rooms to prevent re-calculation on every render
+  const filteredRooms = useMemo(() => {
+    if (!searchQuery.trim()) return dropdownRooms;
+    const query = searchQuery.toLowerCase();
+    return dropdownRooms.filter((room) => room.name.toLowerCase().includes(query));
+  }, [dropdownRooms, searchQuery]);
+
+  const selectedRoomData = useMemo(() => 
+    (mapRooms || []).find((r) => r.id === selectedRoom),
+    [mapRooms, selectedRoom]
   );
 
-  const selectedRoomData = rooms.find((r) => r.id === selectedRoom);
-
-  const getTypeLabel = (type: string) => {
+  const getTypeLabel = useCallback((type: string) => {
     switch (type) {
       case "text":
         return "💬";
       case "video":
         return "📹";
-      case "text-video":
+      case "mixed":
         return "💬📹";
       default:
         return "●";
     }
-  };
+  }, []);
 
+  const handleRoomSelect = useCallback(async (roomId: string) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    // Check if room is password protected
+    if (room.password_protected) {
+      setPendingRoomId(roomId);
+      setPasswordModalOpen(true);
+      setDropdownOpen(false);
+      return;
+    }
+
+    // If not password protected, navigate directly
+    setSelectedRoom(roomId);
+    setDropdownOpen(false);
+    
+    // Add user to room members
+    const userId = localStorage.getItem("agora_uuid");
+    if (userId) {
+      try {
+        await fetch(`${API_URL}/api/rooms/${roomId}/join`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
+        });
+      } catch (error) {
+        console.error("Failed to join room:", error);
+      }
+    }
+    
+    router.push(`/${roomId}`);
+  }, [mapRooms, router]);
+
+  const handlePasswordSubmit = useCallback(async (password: string) => {
+    if (!pendingRoomId) return;
+
+    setIsVerifying(true);
+    setPasswordError("");
+
+    try {
+      const response = await fetch(`${API_URL}/api/rooms/${pendingRoomId}/verify-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.valid) {
+        // Password correct, join room and navigate
+        const userId = localStorage.getItem("agora_uuid");
+        if (userId) {
+          await fetch(`${API_URL}/api/rooms/${pendingRoomId}/join`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId }),
+          });
+        }
+        
+        setPasswordModalOpen(false);
+        setSelectedRoom(pendingRoomId);
+        setPendingRoomId(null);
+        router.push(`/${pendingRoomId}`);
+      } else {
+        setPasswordError("Incorrect password. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to verify password:", error);
+      setPasswordError("Failed to verify password. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [pendingRoomId, router]);
+
+  const handlePasswordModalClose = useCallback(() => {
+    setPasswordModalOpen(false);
+    setPendingRoomId(null);
+    setPasswordError("");
+  }, []);
+
+  const pendingRoomData = useMemo(() => 
+    (mapRooms || []).find((r) => r.id === pendingRoomId),
+    [mapRooms, pendingRoomId]
+  );
   return (
     <>
       <UsernameModal onUsernameSet={setUsername} />
@@ -67,6 +186,14 @@ export default function Page() {
         open={addRoomModalOpen}
         onOpenChange={setAddRoomModalOpen}
         onAddRoom={handleAddRoom}
+      />
+      <PasswordModal
+        isOpen={passwordModalOpen}
+        onClose={handlePasswordModalClose}
+        onSubmit={handlePasswordSubmit}
+        roomName={pendingRoomData?.name || "Room"}
+        isLoading={isVerifying}
+        error={passwordError}
       />
       <div className="flex h-screen bg-background flex-col">
         {/* Header */}
@@ -108,8 +235,17 @@ export default function Page() {
                     className="w-full"
                   />
                 </div>
-                <div className="max-h-96 overflow-y-auto scrollbar-thin">
-                  {isLoading ? (
+                <div 
+                  className="max-h-96 overflow-y-auto scrollbar-thin"
+                  onScroll={(e) => {
+                    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+                    // Load more when scrolled to bottom
+                    if (scrollHeight - scrollTop <= clientHeight + 50 && hasNextPage && !isFetchingNextPage) {
+                      fetchNextPage();
+                    }
+                  }}
+                >
+                  {isDropdownLoading ? (
                     <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
                       Loading rooms...
@@ -119,41 +255,46 @@ export default function Page() {
                       {searchQuery ? "No rooms found" : "No rooms available"}
                     </div>
                   ) : (
-                    filteredRooms.map((room) => (
-                      <DropdownMenuItem
-                        key={room.id}
-                        onClick={() => {
-                          setSelectedRoom(room.id);
-                          setDropdownOpen(false);
-                        }}
-                        className={`cursor-pointer ${
-                          selectedRoom === room.id ? "bg-accent" : ""
-                        }`}
-                      >
-                        <div className="w-full py-1">
-                          <div className="flex items-start justify-between mb-1">
-                            <p className="font-medium text-sm">{room.name}</p>
-                            <span className="text-lg">
-                              {getTypeLabel(room.type)}
-                            </span>
+                    <>
+                      {filteredRooms.map((room) => (
+                        <DropdownMenuItem
+                          key={room.id}
+                          onClick={() => handleRoomSelect(room.id)}
+                          className={`cursor-pointer ${
+                            selectedRoom === room.id ? "bg-accent" : ""
+                          }`}
+                        >
+                          <div className="w-full py-1">
+                            <div className="flex items-start justify-between mb-1">
+                              <p className="font-medium text-sm">{room.name}</p>
+                              <span className="text-lg">
+                                {getTypeLabel(room.type)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                👥 {room.participants}
+                              </span>
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${
+                                  room.active
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
+                                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                }`}
+                              >
+                                {room.active ? "Active" : "Idle"}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              👥 {room.participants}
-                            </span>
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${
-                                room.active
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
-                                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                              }`}
-                            >
-                              {room.active ? "Active" : "Idle"}
-                            </span>
-                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                      {isFetchingNextPage && (
+                        <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Loading more...
                         </div>
-                      </DropdownMenuItem>
-                    ))
+                      )}
+                    </>
                   )}
                 </div>
                 <DropdownMenuSeparator />
@@ -179,7 +320,7 @@ export default function Page() {
         {/* Main Content Area - Just the Map */}
         <div className="flex-1 overflow-hidden">
           <MapLeaflet
-            rooms={rooms}
+            rooms={mapRooms || []}
             selectedRoom={selectedRoom}
             onSelectRoom={setSelectedRoom}
           />
