@@ -4,14 +4,30 @@ export const roomController = {
   // GET /rooms
   async getAllRooms(request, reply) {
     try {
-      const { type, is_public } = request.query;
+      const { type, is_public, limit = 10, offset = 0 } = request.query;
       const filters = {};
 
       if (type) filters.type = type;
       if (is_public !== undefined) filters.is_public = parseInt(is_public);
 
-      const rooms = await roomService.getAllRooms(filters);
-      return reply.code(200).send({ success: true, data: rooms });
+      const rooms = await roomService.getAllRooms(
+        filters, 
+        parseInt(limit), 
+        parseInt(offset)
+      );
+      
+      const total = await roomService.getRoomsCount(filters);
+      
+      return reply.code(200).send({ 
+        success: true, 
+        data: rooms,
+        pagination: {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total,
+          hasMore: parseInt(offset) + rooms.length < total
+        }
+      });
     } catch (error) {
       request.log.error(error);
       return reply.code(500).send({ success: false, error: "Failed to fetch rooms" });

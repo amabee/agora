@@ -1,18 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Room } from "@/interfaces/Room";
 
 const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
 
-// Fetch all rooms
-async function fetchRooms(): Promise<Room[]> {
-  const response = await fetch(`${API_URL}/api/rooms`);
+// Fetch rooms with pagination
+async function fetchRooms({ pageParam = 0 }): Promise<{ rooms: Room[]; nextOffset: number | undefined; hasMore: boolean }> {
+  const limit = 10;
+  const response = await fetch(`${API_URL}/api/rooms?limit=${limit}&offset=${pageParam}`);
   if (!response.ok) {
     throw new Error("Failed to fetch rooms");
   }
   const result = await response.json();
   
   // Map backend response to frontend Room interface
-  return result.data.map((room: any) => ({
+  const rooms = result.data.map((room: any) => ({
     id: room.id.toString(),
     name: room.name,
     type: room.type === "mixed" ? "mixed" : room.type,
@@ -23,6 +24,12 @@ async function fetchRooms(): Promise<Room[]> {
     lat: parseFloat(room.latitude),
     lng: parseFloat(room.longitude),
   }));
+
+  return {
+    rooms,
+    nextOffset: result.pagination.hasMore ? pageParam + limit : undefined,
+    hasMore: result.pagination.hasMore,
+  };
 }
 
 // Create a new room
@@ -70,13 +77,14 @@ async function createRoom(roomData: {
   };
 }
 
-// Hook to fetch all rooms
+// Hook to fetch all rooms with infinite scroll
 export function useRooms() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["rooms"],
     queryFn: fetchRooms,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
+    initialPageParam: 0,
     staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchInterval: 60000, // Auto-refetch every 60 seconds
   });
 }
 

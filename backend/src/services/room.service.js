@@ -2,7 +2,7 @@ import { query } from "../db/index.js";
 
 export const roomService = {
   // Get all rooms
-  async getAllRooms(filters = {}) {
+  async getAllRooms(filters = {}, limit = 10, offset = 0) {
     let sql = `
     SELECT 
       r.*, 
@@ -23,9 +23,29 @@ export const roomService = {
       params.push(filters.is_public);
     }
 
-    sql += " GROUP BY r.id ORDER BY r.created_at DESC";
+    sql += " GROUP BY r.id ORDER BY r.created_at DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
 
     return await query(sql, params);
+  },
+
+  // Get total count of rooms
+  async getRoomsCount(filters = {}) {
+    let sql = "SELECT COUNT(DISTINCT r.id) as count FROM rooms r WHERE 1=1";
+    const params = [];
+
+    if (filters.type) {
+      sql += " AND r.type = ?";
+      params.push(filters.type);
+    }
+
+    if (filters.is_public !== undefined) {
+      sql += " AND r.is_public = ?";
+      params.push(filters.is_public);
+    }
+
+    const result = await query(sql, params);
+    return result[0].count;
   },
 
   // Get room by ID
