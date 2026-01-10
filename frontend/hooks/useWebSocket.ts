@@ -120,12 +120,20 @@ export function useWebSocket({
     }
   }, [roomId, userId, username, enabled]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback((sendLeave = false) => {
     if (reconnectTimeout.current) {
       clearTimeout(reconnectTimeout.current);
     }
     if (ws.current) {
-      ws.current.close();
+      // Send leave message before closing if requested
+      if (sendLeave && ws.current.readyState === WebSocket.OPEN) {
+        try {
+          ws.current.send(JSON.stringify({ type: 'leave' }));
+        } catch (err) {
+          console.error('Failed to send leave message:', err);
+        }
+      }
+      ws.current.close(1000, 'User left');
       ws.current = null;
     }
     setIsConnected(false);
@@ -143,7 +151,7 @@ export function useWebSocket({
   useEffect(() => {
     connect();
     return () => {
-      disconnect();
+      disconnect(true);
     };
   }, [connect, disconnect]);
 

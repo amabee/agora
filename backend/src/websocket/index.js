@@ -115,6 +115,7 @@ export async function setupWebSocket(app) {
                   return;
                 }
                 
+                // Only video-only rooms don't support messages. Mixed and text rooms do.
                 if (room.type === 'video') {
                   socket.send(JSON.stringify({
                     type: 'error',

@@ -51,7 +51,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     useState<Participant[]>(MOCK_PARTICIPANTS);
   const [videoParticipants, setVideoParticipants] = useState<
     VideoParticipant[]
-  >(MOCK_VIDEO_PARTICIPANTS);
+  >([]);
   const [showParticipants, setShowParticipants] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -75,7 +75,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   );
 
   // WebSocket connection for real-time messaging
-  const { isConnected, sendMessage } = useWebSocket({
+  const { isConnected, sendMessage, disconnect } = useWebSocket({
     roomId,
     userId: currentUserId,
     username: currentUsername,
@@ -95,6 +95,31 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
         };
         setMessages((prev) => [...prev, newMessage]);
       } else if (data.type === "user_joined") {
+        // Add to video participants list with join animation
+        const newParticipant: VideoParticipant = {
+          id: data.userId,
+          username: data.username,
+          isMuted: false,
+          isVideoOff: false,
+          isSpeaking: false,
+          avatar: data.username.charAt(0).toUpperCase(),
+          hasVideo: true,
+          isNew: true, // Flag for animation
+        };
+        
+        setVideoParticipants((prev) => {
+          // Don't add duplicate
+          if (prev.find(p => p.id === data.userId)) return prev;
+          return [...prev, newParticipant];
+        });
+        
+        // Remove the isNew flag after animation completes
+        setTimeout(() => {
+          setVideoParticipants((prev) => 
+            prev.map(p => p.id === data.userId ? {...p, isNew: false} : p)
+          );
+        }, 500);
+        
         // Don't show notification for yourself
         if (data.userId !== currentUserId) {
           const systemMessage: Message = {
@@ -108,6 +133,9 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
           setMessages((prev) => [...prev, systemMessage]);
         }
       } else if (data.type === "user_left") {
+        // Remove from video participants
+        setVideoParticipants((prev) => prev.filter(p => p.id !== data.userId));
+        
         if (data.userId !== currentUserId) {
           const systemMessage: Message = {
             id: `system_${Date.now()}`,
@@ -123,6 +151,18 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
         setParticipants(data.participants);
       } else if (data.type === "participant_count") {
         // Update participant count if needed
+      } else if (data.type === "joined") {
+        // Add yourself to video participants when you join
+        const selfParticipant: VideoParticipant = {
+          id: currentUserId,
+          username: currentUsername + " (You)",
+          isMuted: isMicMuted,
+          isVideoOff: isVideoOff,
+          isSpeaking: false,
+          avatar: currentUsername.charAt(0).toUpperCase(),
+          hasVideo: true,
+        };
+        setVideoParticipants([selfParticipant]);
       }
     },
     onConnect: () => {
@@ -252,6 +292,8 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   };
 
   const handleLeaveRoom = () => {
+    // Disconnect WebSocket before navigating away
+    disconnect();
     router.push("/");
   };
 

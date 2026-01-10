@@ -155,10 +155,17 @@ export function VideoGrid({
               {paginatedParticipants.map((p, index) => (
                 <div
                   key={p.id}
-                  className="rounded-xl overflow-hidden bg-[#1a2535] transition-all duration-200 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-white/30"
+                  className={cn(
+                    "rounded-xl overflow-hidden bg-[#1a2535] transition-all duration-200 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-white/30",
+                    p.isNew && "animate-bounce-scale"
+                  )}
                   style={{
-                    animation: !isTransitioning ? `smoothTileIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) ${index * 25}ms forwards` : "none",
-                    opacity: 0
+                    animation: !isTransitioning && !p.isNew 
+                      ? `smoothTileIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) ${index * 25}ms forwards` 
+                      : p.isNew 
+                      ? "bounceScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" 
+                      : "none",
+                    opacity: p.isNew ? 1 : 0
                   }}
                 >
                   <VideoTile
