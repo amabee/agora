@@ -16,7 +16,7 @@ import type { Participant } from "@/interfaces/Participant";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
 
 // Mock data - replace with real data from your backend
 const MOCK_MESSAGES: Message[] = [];
@@ -99,6 +99,35 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 
     joinRoom();
   }, [roomId, currentUserId]);
+
+  // Fetch room members
+  useEffect(() => {
+    if (!roomId) return;
+
+    const fetchMembers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/rooms/${roomId}/members`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const membersData: Participant[] = result.data.map((member: any) => ({
+              id: member.user_id,
+              username: member.username,
+              avatar: member.username.charAt(0).toUpperCase(),
+              role: member.role,
+              joinedAt: new Date(member.joined_at),
+            }));
+            setParticipants(membersData);
+            console.log(`📋 Loaded ${membersData.length} participants`);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch members:", error);
+      }
+    };
+
+    fetchMembers();
+  }, [roomId]);
 
   // WebSocket connection for real-time messaging
   const { isConnected, sendMessage, disconnect } = useWebSocket({
@@ -243,6 +272,92 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     loadMessages();
   }, [roomId, currentUserId]);
 
+  // Define all callbacks before conditional returns
+  const handleLeaveRoom = useCallback(async () => {
+    if (!roomId || !currentUserId) return;
+
+    try {
+      // Remove user from room members
+      await fetch(`${API_URL}/api/rooms/${roomId}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: currentUserId }),
+      });
+      console.log("✅ Left room members");
+    } catch (error) {
+      console.error("Failed to leave room:", error);
+    }
+
+    // Disconnect WebSocket
+    disconnect();
+    
+    // Navigate back to home
+    router.push("/");
+  }, [roomId, currentUserId, disconnect, router]);
+
+  const handleSendMessage = useCallback((content: string) => {
+    if (!content.trim()) return;
+    
+    // Send message via WebSocket with correct backend format
+    const messageData = {
+      type: "message",
+      content: content.trim(),
+    };
+
+    // Send via WebSocket
+    const sent = sendMessage(messageData);
+    
+    if (!sent) {
+      console.error("Failed to send message - WebSocket not connected");
+    }
+  }, [sendMessage]);
+
+  const handleReact = useCallback((messageId: string, emoji: string) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id === messageId) {
+          const existingReaction = msg.reactions?.find(
+            (r) => r.emoji === emoji
+          );
+          if (existingReaction) {
+            return {
+              ...msg,
+              reactions: msg.reactions?.map((r) =>
+                r.emoji === emoji ? { ...r, count: r.count + 1 } : r
+              ),
+            };
+          }
+          return {
+            ...msg,
+            reactions: [...(msg.reactions || []), { emoji, count: 1 }],
+          };
+        }
+        return msg;
+      })
+    );
+  }, []);
+
+  const handleToggleMic = useCallback(() => {
+    setIsMicMuted(!isMicMuted);
+    // TODO: Implement actual mic toggle logic
+  }, [isMicMuted]);
+
+  const handleToggleVideo = useCallback(() => {
+    setIsVideoOff(!isVideoOff);
+    // TODO: Implement actual video toggle logic
+  }, [isVideoOff]);
+
+  const handleToggleScreenShare = useCallback(() => {
+    setIsScreenSharing(!isScreenSharing);
+    // TODO: Implement actual screen share logic
+  }, [isScreenSharing]);
+
+  const formatTime = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
   // Show loading state
   if (isLoading || !roomId) {
     return (
@@ -280,91 +395,6 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   const roomData = {
     name: room.name,
     type: room.type,
-  };
-
-  const handleSendMessage = (content: string) => {
-    if (!content.trim()) return;
-    
-    // Send message via WebSocket with correct backend format
-    const messageData = {
-      type: "message",
-      content: content.trim(),
-    };
-
-    // Send via WebSocket
-    const sent = sendMessage(messageData);
-    
-    if (!sent) {
-      console.error("Failed to send message - WebSocket not connected");
-    }
-  };
-
-  const handleReact = (messageId: string, emoji: string) => {
-    setMessages((prev) =>
-      prev.map((msg) => {
-        if (msg.id === messageId) {
-          const existingReaction = msg.reactions?.find(
-            (r) => r.emoji === emoji
-          );
-          if (existingReaction) {
-            return {
-              ...msg,
-              reactions: msg.reactions?.map((r) =>
-                r.emoji === emoji ? { ...r, count: r.count + 1 } : r
-              ),
-            };
-          }
-          return {
-            ...msg,
-            reactions: [...(msg.reactions || []), { emoji, count: 1 }],
-          };
-        }
-        return msg;
-      })
-    );
-  };
-
-  const handleLeaveRoom = useCallback(async () => {
-    if (!roomId || !currentUserId) return;
-
-    try {
-      // Remove user from room members
-      await fetch(`${API_URL}/api/rooms/${roomId}/leave`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: currentUserId }),
-      });
-      console.log("✅ Left room members");
-    } catch (error) {
-      console.error("Failed to leave room:", error);
-    }
-
-    // Disconnect WebSocket
-    disconnect();
-    
-    // Navigate back to home
-    router.push("/");
-  }, [roomId, currentUserId, disconnect, router]);
-
-  const handleToggleMic = () => {
-    setIsMicMuted(!isMicMuted);
-    // TODO: Implement actual mic toggle logic
-  };
-
-  const handleToggleVideo = () => {
-    setIsVideoOff(!isVideoOff);
-    // TODO: Implement actual video toggle logic
-  };
-
-  const handleToggleScreenShare = () => {
-    setIsScreenSharing(!isScreenSharing);
-    // TODO: Implement actual screen share logic
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -542,12 +572,44 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
             <ChatInput onSendMessage={handleSendMessage} />
           </div>
 
-          {/* Participants Panel */}
-          <ChatParticipantsPanel
-            participants={participants}
-            isOpen={showParticipants}
-            onClose={() => setShowParticipants(false)}
-          />
+          {/* Participants Modal Dialog */}
+          {showParticipants && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowParticipants(false)}>
+              <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground">Participants ({participants.length})</h3>
+                  <button onClick={() => setShowParticipants(false)} className="text-muted-foreground hover:text-foreground">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="overflow-y-auto max-h-[calc(80vh-60px)]">
+                  {participants.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <p>No participants yet</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {participants.map((participant) => (
+                        <div key={participant.id} className="px-4 py-3 flex items-center gap-3 hover:bg-accent transition-colors">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                            {participant.avatar}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate">{participant.username}</p>
+                            {participant.role && participant.role !== 'member' && (
+                              <p className="text-xs text-muted-foreground capitalize">{participant.role}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

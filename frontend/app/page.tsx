@@ -15,20 +15,28 @@ import { UsernameModal } from "@/components/username-modal";
 import { AddRoomModal } from "@/components/add-room-modal";
 import { PasswordModal } from "@/components/password-modal";
 import { Plus, Loader2 } from "lucide-react";
-import { useRooms, useCreateRoom } from "@/hooks/useRooms";
+import { useRooms, useMapRooms, useCreateRoom } from "@/hooks/useRooms";
 import type { Room } from "@/interfaces/Room";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
 
 export default function Page() {
   const router = useRouter();
+  
+  // Separate queries for dropdown (paginated) and map (all rooms)
   const { 
-    data, 
-    isLoading, 
+    data: dropdownData, 
+    isLoading: isDropdownLoading, 
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage 
   } = useRooms();
+  
+  const { 
+    data: mapRooms, 
+    isLoading: isMapLoading 
+  } = useMapRooms();
+  
   const createRoom = useCreateRoom();
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,10 +48,10 @@ export default function Page() {
   const [passwordError, setPasswordError] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Flatten all pages into a single array of rooms
-  const rooms = useMemo(() => 
-    data?.pages.flatMap(page => page.rooms) ?? [],
-    [data]
+  // Flatten dropdown pages into a single array (for dropdown infinite scroll)
+  const dropdownRooms = useMemo(() => 
+    dropdownData?.pages.flatMap(page => page.rooms) ?? [],
+    [dropdownData]
   );
 
   const handleAddRoom = useCallback((newRoom: {
@@ -64,14 +72,14 @@ export default function Page() {
 
   // Memoize filtered rooms to prevent re-calculation on every render
   const filteredRooms = useMemo(() => {
-    if (!searchQuery.trim()) return rooms;
+    if (!searchQuery.trim()) return dropdownRooms;
     const query = searchQuery.toLowerCase();
-    return rooms.filter((room) => room.name.toLowerCase().includes(query));
-  }, [rooms, searchQuery]);
+    return dropdownRooms.filter((room) => room.name.toLowerCase().includes(query));
+  }, [dropdownRooms, searchQuery]);
 
   const selectedRoomData = useMemo(() => 
-    rooms.find((r) => r.id === selectedRoom),
-    [rooms, selectedRoom]
+    (mapRooms || []).find((r) => r.id === selectedRoom),
+    [mapRooms, selectedRoom]
   );
 
   const getTypeLabel = useCallback((type: string) => {
@@ -118,7 +126,7 @@ export default function Page() {
     }
     
     router.push(`/${roomId}`);
-  }, [rooms, router]);
+  }, [mapRooms, router]);
 
   const handlePasswordSubmit = useCallback(async (password: string) => {
     if (!pendingRoomId) return;
@@ -168,8 +176,8 @@ export default function Page() {
   }, []);
 
   const pendingRoomData = useMemo(() => 
-    rooms.find((r) => r.id === pendingRoomId),
-    [rooms, pendingRoomId]
+    (mapRooms || []).find((r) => r.id === pendingRoomId),
+    [mapRooms, pendingRoomId]
   );
   return (
     <>
@@ -237,7 +245,7 @@ export default function Page() {
                     }
                   }}
                 >
-                  {isLoading ? (
+                  {isDropdownLoading ? (
                     <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
                       Loading rooms...
@@ -312,7 +320,7 @@ export default function Page() {
         {/* Main Content Area - Just the Map */}
         <div className="flex-1 overflow-hidden">
           <MapLeaflet
-            rooms={rooms}
+            rooms={mapRooms || []}
             selectedRoom={selectedRoom}
             onSelectRoom={setSelectedRoom}
           />
