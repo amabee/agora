@@ -10,6 +10,7 @@ import { SidePanelChat } from "@/components/side-panel-chat";
 import { VideoGrid, type VideoParticipant } from "@/components/video-grid";
 import { VideoControls } from "@/components/video-controls";
 import { useRoom } from "@/hooks/useRoom";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import type { Message } from "@/components/chat-message";
 import type { Participant } from "@/interfaces/Participant";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,54 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     });
   }, [params]);
 
+  // Get user info from localStorage
+  const [currentUserId] = useState(() => 
+    typeof window !== 'undefined' ? localStorage.getItem("agora_uuid") || `user_${Date.now()}` : `user_${Date.now()}`
+  );
+  const [currentUsername] = useState(() => 
+    typeof window !== 'undefined' ? localStorage.getItem("agora_username") || "Anonymous" : "Anonymous"
+  );
+
+  // WebSocket connection for real-time messaging
+  const { isConnected, sendMessage } = useWebSocket({
+    roomId,
+    userId: currentUserId,
+    username: currentUsername,
+    enabled: !!roomId,
+    onMessage: (data) => {
+      console.log("Received WebSocket message:", data);
+      
+      // Handle different message types
+      if (data.type === "new_message") {
+        const newMessage: Message = {
+          id: data.data.id || Date.now().toString(),
+          userId: data.data.user_id,
+          username: data.data.username || "Unknown",
+          content: data.data.content,
+          timestamp: new Date(data.data.created_at || data.data.timestamp),
+          isOwnMessage: data.data.user_id === currentUserId,
+        };
+        setMessages((prev) => [...prev, newMessage]);
+      } else if (data.type === "user_joined") {
+        console.log(`User ${data.username} joined the room`);
+        // Optionally update participants list
+      } else if (data.type === "user_left") {
+        console.log(`User ${data.username} left the room`);
+        // Optionally update participants list
+      } else if (data.type === "participants") {
+        setParticipants(data.participants);
+      } else if (data.type === "participant_count") {
+        // Update participant count if needed
+      }
+    },
+    onConnect: () => {
+      console.log("Connected to room:", roomId);
+    },
+    onDisconnect: () => {
+      console.log("Disconnected from room:", roomId);
+    },
+  });
+
   // Timer for elapsed time
   useEffect(() => {
     const interval = setInterval(() => {
@@ -113,15 +162,33 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   };
 
   const handleSendMessage = (content: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      userId: "current-user",
-      username: "You",
+    const username = localStorage.getItem("agora_username") || "Anonymous";
+    const userId = localStorage.getItem("agora_uuid") || "unknown";
+    
+    const messageData = {
+      type: "message",
+      roomId,
+      userId,
+      username,
       content,
-      timestamp: new Date(),
-      isOwnMessage: true,
+      timestamp: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, newMessage]);
+
+    // Send via WebSocket
+    const sent = sendMessage(messageData);
+    
+    if (sent) {
+      // Add to local messages immediately (optimistic update)
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        userId,
+        username: "You",
+        content,
+        timestamp: new Date(),
+        isOwnMessage: true,
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    }
   };
 
   const handleReact = (messageId: string, emoji: string) => {

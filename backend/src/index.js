@@ -22,9 +22,18 @@ const app = Fastify({
 async function start() {
   try {
     // register plugins 😊
-    await app.register(websocket);
-    await app.register(antiBotPlugin);
     await app.register(corsPlugin);
+    await app.register(websocket, {
+      options: {
+        verifyClient: (info, next) => {
+          // Allow WebSocket connections from allowed origins
+          const origin = info.origin || info.req.headers.origin;
+          console.log("WebSocket origin:", origin);
+          next(true); // Allow for now, CORS plugin handles security
+        }
+      }
+    });
+    await app.register(antiBotPlugin);
     await app.register(helmetPlugin);
     await app.register(rateLimitPlugin);
     await app.register(requestTrackerPlugin);

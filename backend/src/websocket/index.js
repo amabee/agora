@@ -6,8 +6,10 @@ const roomConnections = new Map();
 
 export async function setupWebSocket(app) {
   app.register(async function (fastify) {
-    fastify.get('/ws', { websocket: true }, (connection, request) => {
-      const { socket } = connection;
+    fastify.get('/ws', { websocket: true }, (socket, request) => {
+      console.log('WebSocket connection attempt from:', request.headers.origin);
+      console.log('WebSocket headers:', request.headers);
+      
       let currentRoomId = null;
       let currentUserId = null;
       let currentUsername = null;
@@ -18,7 +20,7 @@ export async function setupWebSocket(app) {
       socket.on('message', async (message) => {
         try {
           const data = JSON.parse(message.toString());
-          console.log('Received message:', data);
+          console.log('Received message:', data.type, 'from:', data.username || 'unknown');
 
           switch (data.type) {
             case 'join': {
@@ -60,11 +62,15 @@ export async function setupWebSocket(app) {
               roomConnections.get(roomId).add(socket);
 
               // Send confirmation to user
-              socket.send(JSON.stringify({
-                type: 'joined',
-                roomId,
-                message: 'Successfully joined room'
-              }));
+              try {
+                socket.send(JSON.stringify({
+                  type: 'joined',
+                  roomId,
+                  message: 'Successfully joined room'
+                }));
+              } catch (error) {
+                console.error('Error sending joined confirmation:', error);
+              }
 
               // Broadcast to others that user joined
               broadcastToRoom(roomId, {
@@ -160,10 +166,14 @@ export async function setupWebSocket(app) {
           }
         } catch (error) {
           console.error('WebSocket message error:', error);
-          socket.send(JSON.stringify({
-            type: 'error',
-            message: 'Invalid message format'
-          }));
+          try {
+            socket.send(JSON.stringify({
+              type: 'error',
+              message: 'Invalid message format'
+            }));
+          } catch (sendError) {
+            console.error('Failed to send error message:', sendError);
+          }
         }
       });
 
@@ -206,8 +216,17 @@ function broadcastToRoom(roomId, message, excludeSocket = null) {
   const messageStr = JSON.stringify(message);
 
   for (const clientSocket of roomSockets) {
-    if (clientSocket !== excludeSocket && clientSocket.readyState === 1) {
-      clientSocket.send(messageStr);
+    if (clientSocket !== excludeSocket) {
+      try {
+        // For @fastify/websocket, the socket is a ws WebSocket instance
+        // Check OPEN state (1) - see https://github.com/websockets/ws/blob/master/doc/ws.md#ready-state-constants
+        const WebSocket = clientSocket.constructor;
+        if (clientSocket.readyState === WebSocket.OPEN || clientSocket.readyState === 1) {
+          clientSocket.send(messageStr);
+        }
+      } catch (error) {
+        console.error('Error broadcasting to client:', error);
+      }
     }
   }
 }
