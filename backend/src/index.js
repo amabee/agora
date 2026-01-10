@@ -1,82 +1,59 @@
 import Fastify from "fastify";
-import cors from "@fastify/cors";
-import env from "@fastify/env";
-import antibotPlugin from "./plugins/antibot-plugin.js";
+import { config } from "./config/index.js";
+import path from "path";
+import websocket from "@fastify/websocket";
 import corsPlugin from "./plugins/corsplugin.js";
-import helmet from "./plugins/helmet.js";
-import ratelimitPlugin from "./plugins/ratelimit-plugin.js";
+import helmetPlugin from "./plugins/helmet.js";
+import antiBotPlugin from "./plugins/antibot-plugin.js";
+import rateLimitPlugin from "./plugins/ratelimit-plugin.js";
 import requestTrackerPlugin from "./plugins/request-tracker-plugin.js";
 import roomRoutes from "./routes/room.routes.js";
+import messageRoutes from "./routes/message.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import { setupWebSocket } from "./websocket/index.js";
 
 const app = Fastify({
   trustProxy: true,
   logger: {
     level: "warn",
-    prettyPrint: false,
   },
 });
 
-// Environment configuration schema
-const schema = {
-  type: "object",
-  required: ["PORT", "DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"],
-  properties: {
-    PORT: {
-      type: "string",
-      default: "3000",
-    },
-    HOST: {
-      type: "string",
-      default: "0.0.0.0",
-    },
-    DB_HOST: {
-      type: "string",
-    },
-    DB_USER: {
-      type: "string",
-    },
-    DB_PASSWORD: {
-      type: "string",
-    },
-    DB_NAME: {
-      type: "string",
-    },
-  },
-};
-
 async function start() {
   try {
-    // Register env plugin
-    await app.register(env, {
-      schema,
-      dotenv: true,
-    });
-
-    // CUSTOM PLUGINS HEHE 😆
-    await app.register(antibotPlugin);
+    // register plugins 😊
+    await app.register(websocket);
+    await app.register(antiBotPlugin);
     await app.register(corsPlugin);
-    await app.register(helmet);
-    await app.register(ratelimitPlugin);
+    await app.register(helmetPlugin);
+    await app.register(rateLimitPlugin);
     await app.register(requestTrackerPlugin);
 
-    // Routes
-    await app.register(roomRoutes);
+    // Setup WebSocket
+    await setupWebSocket(app);
 
-    // Health check route
-    app.get("/health", async (request, reply) => {
-      return { status: "ok", timestamp: new Date().toISOString() };
+    // ROUTES
+    await app.register(roomRoutes);
+    await app.register(messageRoutes);
+    await app.register(userRoutes);
+
+    app.get("/api/health", async (req, rep) => {
+      return { status: "ok", timeStamp: new Date().toISOString() };
     });
 
-    // Start server
-    const port = app.config.PORT;
-    const host = app.config.HOST;
+    app.listen({ port: config.port, host: config.host }, (err, address) => {
+      if (err) {
+        app.log
+          .error(`Something went wrong, please refer to the error message below \n\n
+          Error Message: ${err}`);
+        process.exit(1);
+      }
 
-    await app.listen({ port, host });
-    console.log(`Server listening on ${host}:${port}`);
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
+      console.log(`🚀 Server running at port ${address}`);
+    });
+  } catch (e) {
+    console.log(`Exception: ${e}`);
   }
 }
 
-start();
+await start();

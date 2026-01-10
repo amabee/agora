@@ -42,7 +42,7 @@ export function AddRoomModal({
 }: AddRoomModalProps) {
   const [roomName, setRoomName] = useState("");
   const [roomDescription, setRoomDescription] = useState("");
-  const [roomType, setRoomType] = useState<"text" | "video" | "text-video">(
+  const [roomType, setRoomType] = useState<"text" | "video" | "mixed">(
     "text"
   );
   const [password, setPassword] = useState("");
@@ -191,7 +191,7 @@ export function AddRoomModal({
             <Label htmlFor="room-type">Room Type</Label>
             <Select
               value={roomType}
-              onValueChange={(value: "text" | "video" | "text-video") =>
+              onValueChange={(value: "text" | "video" | "mixed") =>
                 setRoomType(value)
               }
             >
@@ -201,7 +201,7 @@ export function AddRoomModal({
               <SelectContent>
                 <SelectItem value="text">💬 Text Only</SelectItem>
                 <SelectItem value="video">📹 Video Only</SelectItem>
-                <SelectItem value="text-video">💬📹 Text + Video</SelectItem>
+                <SelectItem value="mixed">💬📹 Text + Video</SelectItem>
               </SelectContent>
             </Select>
           </div>

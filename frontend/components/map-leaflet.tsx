@@ -93,7 +93,7 @@ export function MapLeaflet({ rooms, selectedRoom, onSelectRoom }: MapLeafletProp
       case "video":
         color = "#a855f7"; // purple-500
         break;
-      case "text-video":
+      case "mixed":
         color = "#10b981"; // green-500
         break;
       default:

@@ -3,18 +3,29 @@ import fp from "fastify-plugin";
 import { config } from "../config/index.js";
 
 async function corsPlugin(app) {
-  const origins = config.cors?.origin || ["http://192.168.1.8:3000/"];
+  // Get origins from config
+  const origins = config.cors.origin.length > 0 ? config.cors.origin : ["http://localhost:3000"];
+
+  console.log("Allowed CORS origins:", origins);
 
   app.register(cors, {
     origin: (origin, callback) => {
+      
+      console.log("Request origin:", origin);
+      
       // Allow requests with no origin (Postman, curl, server-to-server)
       if (!origin) {
         return callback(null, true);
       }
 
-      if (origins.includes(origin)) {
+      // Remove trailing slash for comparison
+      const normalizedOrigin = origin.replace(/\/$/, '');
+      const normalizedOrigins = origins.map(o => o.replace(/\/$/, ''));
+
+      if (normalizedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       } else {
+        console.log("Origin rejected:", origin);
         return callback(new Error("Not allowed by CORS"), false);
       }
     },

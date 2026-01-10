@@ -28,7 +28,7 @@ export default function Page() {
   const handleAddRoom = (newRoom: {
     name: string;
     description?: string;
-    type: "text" | "video" | "text-video";
+    type: "text" | "video" | "mixed";
     password?: string;
     lat: number;
     lng: number;
@@ -53,7 +53,7 @@ export default function Page() {
         return "💬";
       case "video":
         return "📹";
-      case "text-video":
+      case "mixed":
         return "💬📹";
       default:
         return "●";

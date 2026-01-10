@@ -13,7 +13,7 @@ export function RoomsList({ selectedRoom, onSelectRoom }: RoomsListProps) {
         return "💬"
       case "video":
         return "📹"
-      case "text-video":
+      case "mixed":
         return "💬📹"
       default:
         return "●"

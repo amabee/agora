@@ -4,7 +4,7 @@ export interface AddRoomModalProps {
   onAddRoom: (room: {
     name: string
     description?: string
-    type: "text" | "video" | "text-video"
+    type: "text" | "video" | "mixed"
     password?: string
     lat: number,
     lng: number

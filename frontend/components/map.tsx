@@ -1,134 +1,91 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
+import { useState } from "react";
 
 interface Room {
-  id: string
-  name: string
-  type: "text" | "video" | "text-video"
-  participants: number
-  lat: number
-  lng: number
-  active: boolean
+  id: string;
+  name: string;
+  type: "text" | "video" | "mixed";
+  participants: number;
+  lat: number;
+  lng: number;
+  active: boolean;
 }
 
-const ROOM_LOCATIONS: Room[] = [
-  {
-    id: "room-1",
-    name: "Downtown Coffee",
-    type: "text-video",
-    participants: 8,
-    lat: 40.7128,
-    lng: -74.006,
-    active: true,
-  },
-  {
-    id: "room-2",
-    name: "Park Discussion",
-    type: "text",
-    participants: 12,
-    lat: 40.7829,
-    lng: -73.9654,
-    active: true,
-  },
-  {
-    id: "room-3",
-    name: "Studio Session",
-    type: "video",
-    participants: 5,
-    lat: 40.7505,
-    lng: -73.9972,
-    active: false,
-  },
-  {
-    id: "room-4",
-    name: "Community Center",
-    type: "text-video",
-    participants: 15,
-    lat: 40.7614,
-    lng: -73.9776,
-    active: true,
-  },
-  {
-    id: "room-5",
-    name: "Quiet Corner",
-    type: "text",
-    participants: 3,
-    lat: 40.7489,
-    lng: -73.968,
-    active: false,
-  },
-]
+const ROOM_LOCATIONS: Room[] = [];
 
 interface MapProps {
-  selectedRoom: string | null
-  onSelectRoom: (roomId: string) => void
+  selectedRoom: string | null;
+  onSelectRoom: (roomId: string) => void;
 }
 
 interface Tooltip {
-  roomId: string
-  x: number
-  y: number
+  roomId: string;
+  x: number;
+  y: number;
 }
 
 export function Map({ selectedRoom, onSelectRoom }: MapProps) {
-  const [hoveredRoom, setHoveredRoom] = useState<string | null>(null)
-  const [tooltip, setTooltip] = useState<Tooltip | null>(null)
+  const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case "text":
-        return "#6366f1"
+        return "#6366f1";
       case "video":
-        return "#a855f7"
-      case "text-video":
-        return "#10b981"
+        return "#a855f7";
+      case "mixed":
+        return "#10b981";
       default:
-        return "#64748b"
+        return "#64748b";
     }
-  }
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "text":
-        return "T"
+        return "T";
       case "video":
-        return "V"
-      case "text-video":
-        return "TV"
+        return "V";
+      case "mixed":
+        return "TV";
       default:
-        return "●"
+        return "●";
     }
-  }
+  };
 
   // Simple SVG map visualization
-  const minLat = Math.min(...ROOM_LOCATIONS.map((r) => r.lat))
-  const maxLat = Math.max(...ROOM_LOCATIONS.map((r) => r.lat))
-  const minLng = Math.min(...ROOM_LOCATIONS.map((r) => r.lng))
-  const maxLng = Math.max(...ROOM_LOCATIONS.map((r) => r.lng))
+  const minLat = Math.min(...ROOM_LOCATIONS.map((r) => r.lat));
+  const maxLat = Math.max(...ROOM_LOCATIONS.map((r) => r.lat));
+  const minLng = Math.min(...ROOM_LOCATIONS.map((r) => r.lng));
+  const maxLng = Math.max(...ROOM_LOCATIONS.map((r) => r.lng));
 
-  const width = 1000
-  const height = 600
+  const width = 1000;
+  const height = 600;
 
-  const latToY = (lat: number) => ((maxLat - lat) / (maxLat - minLat)) * height
-  const lngToX = (lng: number) => ((lng - minLng) / (maxLng - minLng)) * width
+  const latToY = (lat: number) => ((maxLat - lat) / (maxLat - minLat)) * height;
+  const lngToX = (lng: number) => ((lng - minLng) / (maxLng - minLng)) * width;
 
-  const handlePinMouseEnter = (room: Room, event: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    setHoveredRoom(room.id)
+  const handlePinMouseEnter = (
+    room: Room,
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setHoveredRoom(room.id);
     setTooltip({
       roomId: room.id,
       x: rect.left + rect.width / 2,
       y: rect.top - 10,
-    })
-  }
+    });
+  };
 
   const handlePinMouseLeave = () => {
-    setHoveredRoom(null)
-    setTooltip(null)
-  }
+    setHoveredRoom(null);
+    setTooltip(null);
+  };
 
   return (
     <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900 dark:to-slate-800 relative overflow-hidden flex flex-col">
@@ -141,7 +98,12 @@ export function Map({ selectedRoom, onSelectRoom }: MapProps) {
         >
           {/* Background grid pattern */}
           <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <pattern
+              id="grid"
+              width="40"
+              height="40"
+              patternUnits="userSpaceOnUse"
+            >
               <path
                 d="M 40 0 L 0 0 0 40"
                 fill="none"
@@ -154,14 +116,20 @@ export function Map({ selectedRoom, onSelectRoom }: MapProps) {
           <rect width={width} height={height} fill="url(#grid)" />
 
           {/* City label */}
-          <text x={width / 2} y={30} textAnchor="middle" className="text-2xl font-bold" fill="currentColor">
+          <text
+            x={width / 2}
+            y={30}
+            textAnchor="middle"
+            className="text-2xl font-bold"
+            fill="currentColor"
+          >
             Manhattan Community Hub
           </text>
 
           {/* Connection lines between rooms */}
           {ROOM_LOCATIONS.map((room, idx) => {
             if (idx < ROOM_LOCATIONS.length - 1) {
-              const nextRoom = ROOM_LOCATIONS[idx + 1]
+              const nextRoom = ROOM_LOCATIONS[idx + 1];
               return (
                 <line
                   key={`line-${room.id}-${nextRoom.id}`}
@@ -174,23 +142,29 @@ export function Map({ selectedRoom, onSelectRoom }: MapProps) {
                   strokeDasharray="5,5"
                   className="text-slate-300 dark:text-slate-600 opacity-50"
                 />
-              )
+              );
             }
-            return null
+            return null;
           })}
 
           {/* Room pins */}
           {ROOM_LOCATIONS.map((room) => {
-            const x = lngToX(room.lng)
-            const y = latToY(room.lat)
-            const isSelected = selectedRoom === room.id
-            const isHovered = hoveredRoom === room.id
-            const scale = isSelected ? 1.3 : isHovered ? 1.15 : 1
+            const x = lngToX(room.lng);
+            const y = latToY(room.lat);
+            const isSelected = selectedRoom === room.id;
+            const isHovered = hoveredRoom === room.id;
+            const scale = isSelected ? 1.3 : isHovered ? 1.15 : 1;
 
             return (
               <g key={room.id}>
                 {/* Pin shadow */}
-                <circle cx={x} cy={y + 8} r={16 * scale} fill="black" opacity="0.1" />
+                <circle
+                  cx={x}
+                  cy={y + 8}
+                  r={16 * scale}
+                  fill="black"
+                  opacity="0.1"
+                />
 
                 {/* Pin circle */}
                 <circle
@@ -240,15 +214,15 @@ export function Map({ selectedRoom, onSelectRoom }: MapProps) {
                   {getTypeIcon(room.type)}
                 </text>
               </g>
-            )
+            );
           })}
         </svg>
 
         {/* Interactive buttons overlay */}
         <div className="absolute inset-0 pointer-events-none">
           {ROOM_LOCATIONS.map((room) => {
-            const x = (lngToX(room.lng) / width) * 100
-            const y = (latToY(room.lat) / height) * 100
+            const x = (lngToX(room.lng) / width) * 100;
+            const y = (latToY(room.lat) / height) * 100;
 
             return (
               <button
@@ -263,7 +237,7 @@ export function Map({ selectedRoom, onSelectRoom }: MapProps) {
                 }}
                 aria-label={`Join ${room.name}`}
               />
-            )
+            );
           })}
         </div>
 
@@ -283,18 +257,27 @@ export function Map({ selectedRoom, onSelectRoom }: MapProps) {
                   {ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)?.name}
                 </p>
                 <p className="text-muted-foreground">
-                  👥 {ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)?.participants} participants
+                  👥{" "}
+                  {
+                    ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)
+                      ?.participants
+                  }{" "}
+                  participants
                 </p>
                 <p className="text-muted-foreground">
-                  {ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)?.type === "text"
+                  {ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)?.type ===
+                  "text"
                     ? "💬 Text only"
-                    : ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)?.type === "video"
-                      ? "📹 Video only"
-                      : "💬📹 Chat & Video"}
+                    : ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)
+                        ?.type === "video"
+                    ? "📹 Video only"
+                    : "💬📹 Chat & Video"}
                 </p>
                 <div className="mt-2 flex gap-1">
                   <span className="text-xs bg-muted px-2 py-1 rounded">
-                    {ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)?.active ? "🟢 Active" : "⚫ Idle"}
+                    {ROOM_LOCATIONS.find((r) => r.id === tooltip.roomId)?.active
+                      ? "🟢 Active"
+                      : "⚫ Idle"}
                   </span>
                 </div>
               </div>
@@ -319,5 +302,5 @@ export function Map({ selectedRoom, onSelectRoom }: MapProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

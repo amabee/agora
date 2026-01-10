@@ -30,9 +30,50 @@ export const roomService = {
 
   // Get room by ID
   async getRoomById(id) {
-    const sql = "SELECT * FROM rooms WHERE id = ?";
-    const results = await query(sql, [id]);
-    return results[0];
+    // Get basic room info
+    const roomSql = "SELECT * FROM rooms WHERE id = ?";
+    const roomResults = await query(roomSql, [id]);
+    
+    if (!roomResults || roomResults.length === 0) {
+      return null;
+    }
+    
+    const room = roomResults[0];
+    
+    // Get participants
+    const participantsSql = `
+      SELECT rm.*, u.username, u.last_active 
+      FROM room_members rm
+      JOIN users u ON rm.user_id = u.id
+      WHERE rm.room_id = ?
+      ORDER BY rm.joined_at DESC
+    `;
+    room.participants = await query(participantsSql, [id]);
+    room.participant_count = room.participants.length;
+    
+    // Get video sessions and participants if room type is video or mixed
+    if (room.type === 'video' || room.type === 'mixed') {
+      const videoSessionsSql = `
+        SELECT * FROM video_sessions 
+        WHERE room_id = ? 
+        ORDER BY started_at DESC
+      `;
+      room.video_sessions = await query(videoSessionsSql, [id]);
+      
+      // Get video participants for each session
+      for (let session of room.video_sessions) {
+        const videoParticipantsSql = `
+          SELECT vp.*, u.username 
+          FROM video_participants vp
+          JOIN users u ON vp.user_id = u.id
+          WHERE vp.video_session_id = ?
+          ORDER BY vp.joined_at DESC
+        `;
+        session.video_participants = await query(videoParticipantsSql, [session.id]);
+      }
+    }
+    
+    return room;
   },
 
   // Get rooms near location

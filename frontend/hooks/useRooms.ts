@@ -15,7 +15,7 @@ async function fetchRooms(): Promise<Room[]> {
   return result.data.map((room: any) => ({
     id: room.id.toString(),
     name: room.name,
-    type: room.type === "mixed" ? "text-video" : room.type,
+    type: room.type === "mixed" ? "mixed" : room.type,
     participants: room.participant_count || 0,
     active: true,
     password: room.password,
@@ -29,7 +29,7 @@ async function fetchRooms(): Promise<Room[]> {
 async function createRoom(roomData: {
   name: string;
   description?: string;
-  type: "text" | "video" | "text-video";
+  type: "text" | "video" | "mixed";
   password?: string;
   lat: number;
   lng: number;
@@ -42,7 +42,7 @@ async function createRoom(roomData: {
     body: JSON.stringify({
       name: roomData.name,
       description: roomData.description,
-      type: roomData.type === "text-video" ? "mixed" : roomData.type,
+      type: roomData.type === "mixed" ? "text" : roomData.type,
       password: roomData.password,
       latitude: roomData.lat.toString(),
       longitude: roomData.lng.toString(),
@@ -60,7 +60,7 @@ async function createRoom(roomData: {
   return {
     id: room.id.toString(),
     name: room.name,
-    type: room.type === "mixed" ? "text-video" : room.type,
+    type: room.type === "mixed" ? "text" : room.type,
     participants: room.participant_count || 0,
     active: true,
     password: room.password,
