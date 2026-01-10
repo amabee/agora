@@ -95,11 +95,30 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
         };
         setMessages((prev) => [...prev, newMessage]);
       } else if (data.type === "user_joined") {
-        console.log(`User ${data.username} joined the room`);
-        // Optionally update participants list
+        // Don't show notification for yourself
+        if (data.userId !== currentUserId) {
+          const systemMessage: Message = {
+            id: `system_${Date.now()}`,
+            userId: "system",
+            username: "System",
+            content: `${data.username} joined the room`,
+            timestamp: new Date(data.timestamp),
+            isSystemMessage: true,
+          };
+          setMessages((prev) => [...prev, systemMessage]);
+        }
       } else if (data.type === "user_left") {
-        console.log(`User ${data.username} left the room`);
-        // Optionally update participants list
+        if (data.userId !== currentUserId) {
+          const systemMessage: Message = {
+            id: `system_${Date.now()}`,
+            userId: "system",
+            username: "System",
+            content: `${data.username} left the room`,
+            timestamp: new Date(data.timestamp),
+            isSystemMessage: true,
+          };
+          setMessages((prev) => [...prev, systemMessage]);
+        }
       } else if (data.type === "participants") {
         setParticipants(data.participants);
       } else if (data.type === "participant_count") {
@@ -121,6 +140,35 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Load existing messages when room is loaded
+  useEffect(() => {
+    if (!roomId) return;
+
+    const loadMessages = async () => {
+      try {
+        const API_URL = `http://${process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+        const response = await fetch(`${API_URL}/api/rooms/${roomId}/messages`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const loadedMessages: Message[] = data.map((msg: any) => ({
+            id: msg.id.toString(),
+            userId: msg.user_id,
+            username: msg.username || "Unknown",
+            content: msg.content,
+            timestamp: new Date(msg.created_at),
+            isOwnMessage: msg.user_id === currentUserId,
+          }));
+          setMessages(loadedMessages);
+        }
+      } catch (error) {
+        console.error("Failed to load messages:", error);
+      }
+    };
+
+    loadMessages();
+  }, [roomId, currentUserId]);
 
   // Show loading state
   if (isLoading) {
@@ -162,32 +210,19 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   };
 
   const handleSendMessage = (content: string) => {
-    const username = localStorage.getItem("agora_username") || "Anonymous";
-    const userId = localStorage.getItem("agora_uuid") || "unknown";
+    if (!content.trim()) return;
     
+    // Send message via WebSocket with correct backend format
     const messageData = {
       type: "message",
-      roomId,
-      userId,
-      username,
-      content,
-      timestamp: new Date().toISOString(),
+      content: content.trim(),
     };
 
     // Send via WebSocket
     const sent = sendMessage(messageData);
     
-    if (sent) {
-      // Add to local messages immediately (optimistic update)
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        userId,
-        username: "You",
-        content,
-        timestamp: new Date(),
-        isOwnMessage: true,
-      };
-      setMessages((prev) => [...prev, newMessage]);
+    if (!sent) {
+      console.error("Failed to send message - WebSocket not connected");
     }
   };
 

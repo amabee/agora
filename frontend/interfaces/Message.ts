@@ -7,6 +7,7 @@ export interface Message {
   content: string
   timestamp: Date
   isOwnMessage?: boolean
+  isSystemMessage?: boolean
   reactions?: { emoji: string; count: number }[]
   attachments?: { type: "image" | "file"; url: string; name?: string }[]
 }
