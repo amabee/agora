@@ -96,31 +96,55 @@ export async function setupWebSocket(app) {
 
               const { content } = data;
               
-              // Verify room type allows messages
-              const room = await roomService.getRoomById(currentRoomId);
-              if (room.type === 'video') {
+              if (!content || typeof content !== 'string') {
                 socket.send(JSON.stringify({
                   type: 'error',
-                  message: 'Video-only rooms do not support text messages'
+                  message: 'Message content is required'
                 }));
                 return;
               }
+              
+              try {
+                // Verify room type allows messages
+                const room = await roomService.getRoomById(currentRoomId);
+                if (!room) {
+                  socket.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Room not found'
+                  }));
+                  return;
+                }
+                
+                if (room.type === 'video') {
+                  socket.send(JSON.stringify({
+                    type: 'error',
+                    message: 'Video-only rooms do not support text messages'
+                  }));
+                  return;
+                }
 
-              // Save message to database
-              const message = await messageService.createMessage({
-                room_id: currentRoomId,
-                user_id: currentUserId,
-                content,
-                message_type: 'text'
-              });
+                // Save message to database
+                const message = await messageService.createMessage({
+                  room_id: currentRoomId,
+                  user_id: currentUserId,
+                  content,
+                  message_type: 'text'
+                });
 
-              // Broadcast message to all users in the room
-              broadcastToRoom(currentRoomId, {
-                type: 'new_message',
-                data: message
-              });
+                // Broadcast message to all users in the room
+                broadcastToRoom(currentRoomId, {
+                  type: 'new_message',
+                  data: message
+                });
 
-              console.log(`Message sent in room ${currentRoomId} by ${currentUsername}`);
+                console.log(`Message sent in room ${currentRoomId} by ${currentUsername}`);
+              } catch (messageError) {
+                console.error('Error sending message:', messageError);
+                socket.send(JSON.stringify({
+                  type: 'error',
+                  message: 'Failed to send message: ' + messageError.message
+                }));
+              }
               break;
             }
 
@@ -166,10 +190,12 @@ export async function setupWebSocket(app) {
           }
         } catch (error) {
           console.error('WebSocket message error:', error);
+          console.error('Error stack:', error.stack);
+          console.error('Raw message received:', message.toString());
           try {
             socket.send(JSON.stringify({
               type: 'error',
-              message: 'Invalid message format'
+              message: 'Invalid message format: ' + error.message
             }));
           } catch (sendError) {
             console.error('Failed to send error message:', sendError);
