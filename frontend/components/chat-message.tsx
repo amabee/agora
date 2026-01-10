@@ -81,8 +81,8 @@ export function ChatMessage({ message, onReact }: ChatMessageProps) {
         <div className={cn(
           "px-4 py-2.5 shadow-lg transition-all duration-200",
           message.isOwnMessage 
-            ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-md" 
-            : "bg-white/10 backdrop-blur-sm text-white rounded-tl-3xl rounded-tr-3xl rounded-br-3xl rounded-bl-md hover:bg-white/15"
+            ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-tl-[20px] rounded-tr-[20px] rounded-bl-[20px] rounded-br-[4px]" 
+            : "bg-white/10 backdrop-blur-sm text-white rounded-tl-[20px] rounded-tr-[20px] rounded-br-[20px] rounded-bl-[4px] hover:bg-white/15"
         )}>
           {/* Image Attachments */}
           {message.attachments && message.attachments.length > 0 && (

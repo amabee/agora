@@ -218,7 +218,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   }, [roomId, currentUserId]);
 
   // Show loading state
-  if (isLoading) {
+  if (isLoading || !roomId) {
     return (
       <div className="h-screen bg-[#0f0f0f] flex items-center justify-center">
         <div className="text-center">

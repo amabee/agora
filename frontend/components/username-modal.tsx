@@ -108,20 +108,21 @@ export function UsernameModal({ onUsernameSet }: UsernameModalProps) {
     setError("");
 
     try {
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch(`/api/user/${trimmedUuid}`);
+      const API_URL = `http://${process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+      const response = await fetch(`${API_URL}/api/users/${trimmedUuid}`);
       
       if (!response.ok) {
         throw new Error("User not found");
       }
 
-      const data = await response.json();
+      const result = await response.json();
+      const userData = result.data;
       
       // Store both username and UUID
-      localStorage.setItem(USERNAME_STORAGE_KEY, data.username);
+      localStorage.setItem(USERNAME_STORAGE_KEY, userData.username);
       localStorage.setItem(UUID_STORAGE_KEY, trimmedUuid);
       
-      onUsernameSet(data.username);
+      onUsernameSet(userData.username);
       setOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch user data");
@@ -130,7 +131,7 @@ export function UsernameModal({ onUsernameSet }: UsernameModalProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedUsername = username.trim();
@@ -150,18 +151,39 @@ export function UsernameModal({ onUsernameSet }: UsernameModalProps) {
       return;
     }
 
-    // Save to localStorage
-    localStorage.setItem(USERNAME_STORAGE_KEY, trimmedUsername);
-    
-    // Generate and save UUID for new users
-    const newUuid = generateUUID();
-    localStorage.setItem(UUID_STORAGE_KEY, newUuid);
-    
-    // TODO: Save to database - send username and UUID to your backend
-    // Example: await fetch('/api/user', { method: 'POST', body: JSON.stringify({ username: trimmedUsername, uuid: newUuid }) })
-    
-    onUsernameSet(trimmedUsername);
-    setOpen(false);
+    setIsLoadingUuid(true);
+    setError("");
+
+    try {
+      // Create user in backend - backend will generate UUID
+      const API_URL = `http://${process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+      const response = await fetch(`${API_URL}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: trimmedUsername }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create user");
+      }
+
+      const result = await response.json();
+      const newUuid = result.data.id;
+
+      // Save to localStorage
+      localStorage.setItem(USERNAME_STORAGE_KEY, trimmedUsername);
+      localStorage.setItem(UUID_STORAGE_KEY, newUuid);
+      
+      onUsernameSet(trimmedUsername);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create user");
+    } finally {
+      setIsLoadingUuid(false);
+    }
   };
 
   return (
@@ -205,14 +227,15 @@ export function UsernameModal({ onUsernameSet }: UsernameModalProps) {
                 {error && <p className="text-sm text-destructive">{error}</p>}
               </div>
               <div className="flex flex-col gap-2">
-                <Button type="submit" className="w-full">
-                  Continue
+                <Button type="submit" className="w-full" disabled={isLoadingUuid}>
+                  {isLoadingUuid ? "Creating account..." : "Continue"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleGenerateRandom}
                   className="w-full"
+                  disabled={isLoadingUuid}
                 >
                   Generate Random Username
                 </Button>

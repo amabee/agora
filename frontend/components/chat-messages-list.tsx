@@ -56,7 +56,7 @@ export function ChatMessagesList({ messages, onReact }: ChatMessagesListProps) {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto scroll-smooth"
+        className="flex-1 overflow-y-auto scrollbar-thin scroll-smooth"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
