@@ -14,7 +14,7 @@ export const messageController = {
         return reply.code(404).send({ success: false, error: "Room not found" });
       }
 
-      // Don't allow fetching messages for video-only rooms
+      // Don't allow fetching messages for video-only rooms (but allow mixed rooms)
       if (room.type === 'video') {
         return reply.code(400).send({ 
           success: false, 

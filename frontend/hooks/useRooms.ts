@@ -5,7 +5,7 @@ const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${p
 
 // Fetch all rooms
 async function fetchRooms(): Promise<Room[]> {
-  const response = await fetch(`${API_URL}/rooms`);
+  const response = await fetch(`${API_URL}/api/rooms`);
   if (!response.ok) {
     throw new Error("Failed to fetch rooms");
   }
@@ -34,7 +34,7 @@ async function createRoom(roomData: {
   lat: number;
   lng: number;
 }): Promise<Room> {
-  const response = await fetch(`${API_URL}/rooms`, {
+  const response = await fetch(`${API_URL}/api/rooms`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

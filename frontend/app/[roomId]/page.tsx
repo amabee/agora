@@ -188,19 +188,26 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     const loadMessages = async () => {
       try {
         const API_URL = `http://${process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
-        const response = await fetch(`${API_URL}/api/rooms/${roomId}/messages`);
+        const response = await fetch(`${API_URL}/api/rooms/${roomId}/messages?limit=50`);
         
         if (response.ok) {
-          const data = await response.json();
-          const loadedMessages: Message[] = data.map((msg: any) => ({
-            id: msg.id.toString(),
-            userId: msg.user_id,
-            username: msg.username || "Unknown",
-            content: msg.content,
-            timestamp: new Date(msg.created_at),
-            isOwnMessage: msg.user_id === currentUserId,
-          }));
-          setMessages(loadedMessages);
+          const result = await response.json();
+          
+          // Check if response has success and data properties
+          if (result.success && result.data) {
+            const loadedMessages: Message[] = result.data.map((msg: any) => ({
+              id: msg.id.toString(),
+              userId: msg.user_id,
+              username: msg.username || "Unknown",
+              content: msg.content,
+              timestamp: new Date(msg.created_at),
+              isOwnMessage: msg.user_id === currentUserId,
+            }));
+            setMessages(loadedMessages);
+            console.log(`📚 Loaded ${loadedMessages.length} previous messages`);
+          }
+        } else {
+          console.log("No messages to load or room doesn't support messages");
         }
       } catch (error) {
         console.error("Failed to load messages:", error);

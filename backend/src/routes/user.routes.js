@@ -2,14 +2,14 @@ import { userController } from "../controllers/user.controller.js";
 
 export default async function userRoutes(app) {
   // Get all users
-  app.get("/users", userController.getAllUsers);
+  app.get("/api/users", userController.getAllUsers);
 
   // Get user by ID
-  app.get("/users/:id", userController.getUserById);
+  app.get("/api/users/:id", userController.getUserById);
 
   // Get user by username
-  app.get("/users/username/:username", userController.getUserByUsername);
+  app.get("/api/users/username/:username", userController.getUserByUsername);
 
   // Create user
-  app.post("/users", userController.createUser);
+  app.post("/api/users", userController.createUser);
 }

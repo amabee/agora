@@ -5,7 +5,7 @@ const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${p
 
 // Fetch a single room by ID
 async function fetchRoom(roomId: string): Promise<Room> {
-  const response = await fetch(`${API_URL}/rooms/${roomId}`);
+  const response = await fetch(`${API_URL}/api/rooms/${roomId}`);
   if (!response.ok) {
     throw new Error("Failed to fetch room");
   }
