@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ChatRoomHeader } from "@/components/chat-room-header";
 import { ChatMessagesList } from "@/components/chat-messages-list";
@@ -16,31 +16,12 @@ import type { Participant } from "@/interfaces/Participant";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 // Mock data - replace with real data from your backend
 const MOCK_MESSAGES: Message[] = [];
 
 const MOCK_PARTICIPANTS: Participant[] = [];
-
-const MOCK_VIDEO_PARTICIPANTS: VideoParticipant[] = [
-  {
-    id: "user-1",
-    username: "James",
-    isMuted: false,
-    isVideoOff: false,
-    isSpeaking: false,
-    avatar: "J",
-    hasVideo: true,
-  },
-
-  {
-    id: "current-user",
-    username: "Zoe S (You)",
-    isMuted: false,
-    isVideoOff: false,
-    avatar: "ZS",
-    hasVideo: true,
-  },
-];
 
 export default function RoomPage({ params }: { params: { roomId: string } }) {
   const router = useRouter();
@@ -73,6 +54,51 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   const [currentUsername] = useState(() => 
     typeof window !== 'undefined' ? localStorage.getItem("agora_username") || "Anonymous" : "Anonymous"
   );
+
+  // Prevent browser back button navigation
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      window.history.pushState(null, '', window.location.href);
+      // Optionally show a message or do nothing
+    };
+
+    // Push current state to prevent back navigation
+    window.history.pushState(null, '', window.location.href);
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Add user to room members on mount
+  useEffect(() => {
+    if (!roomId || !currentUserId) return;
+
+    const joinRoom = async () => {
+      try {
+        await fetch(`${API_URL}/api/rooms/${roomId}/join`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: currentUserId }),
+        });
+        console.log("✅ Joined room members");
+      } catch (error) {
+        console.error("Failed to join room:", error);
+      }
+    };
+
+    joinRoom();
+  }, [roomId, currentUserId]);
 
   // WebSocket connection for real-time messaging
   const { isConnected, sendMessage, disconnect } = useWebSocket({
@@ -298,11 +324,27 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     );
   };
 
-  const handleLeaveRoom = () => {
-    // Disconnect WebSocket before navigating away
+  const handleLeaveRoom = useCallback(async () => {
+    if (!roomId || !currentUserId) return;
+
+    try {
+      // Remove user from room members
+      await fetch(`${API_URL}/api/rooms/${roomId}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: currentUserId }),
+      });
+      console.log("✅ Left room members");
+    } catch (error) {
+      console.error("Failed to leave room:", error);
+    }
+
+    // Disconnect WebSocket
     disconnect();
+    
+    // Navigate back to home
     router.push("/");
-  };
+  }, [roomId, currentUserId, disconnect, router]);
 
   const handleToggleMic = () => {
     setIsMicMuted(!isMicMuted);

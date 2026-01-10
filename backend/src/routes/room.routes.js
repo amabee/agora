@@ -21,4 +21,13 @@ export default async function roomRoutes(app) {
 
   // Get room members
   app.get("/api/rooms/:id/members", roomController.getRoomMembers);
+
+  // Join room (add member)
+  app.post("/api/rooms/:id/join", roomController.joinRoom);
+
+  // Leave room (remove member)
+  app.post("/api/rooms/:id/leave", roomController.leaveRoom);
+
+  // Verify room password
+  app.post("/api/rooms/:id/verify-password", roomController.verifyPassword);
 }

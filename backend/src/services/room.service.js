@@ -212,4 +212,20 @@ export const roomService = {
     `;
     return await query(sql, [roomId]);
   },
+
+  // Add room member
+  async addRoomMember(roomId, userId) {
+    const sql = `
+      INSERT INTO room_members (room_id, user_id, role)
+      VALUES (?, ?, 'member')
+      ON DUPLICATE KEY UPDATE joined_at = CURRENT_TIMESTAMP
+    `;
+    return await query(sql, [roomId, userId]);
+  },
+
+  // Remove room member
+  async removeRoomMember(roomId, userId) {
+    const sql = "DELETE FROM room_members WHERE room_id = ? AND user_id = ?";
+    return await query(sql, [roomId, userId]);
+  },
 };

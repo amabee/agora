@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { MapLeaflet } from "@/components/map-leaflet";
 import {
   DropdownMenu,
@@ -12,11 +13,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { UsernameModal } from "@/components/username-modal";
 import { AddRoomModal } from "@/components/add-room-modal";
+import { PasswordModal } from "@/components/password-modal";
 import { Plus, Loader2 } from "lucide-react";
 import { useRooms, useCreateRoom } from "@/hooks/useRooms";
 import type { Room } from "@/interfaces/Room";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 export default function Page() {
+  const router = useRouter();
   const { 
     data, 
     isLoading, 
@@ -30,6 +35,10 @@ export default function Page() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [addRoomModalOpen, setAddRoomModalOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string>("");
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Flatten all pages into a single array of rooms
   const rooms = useMemo(() => 
@@ -78,11 +87,90 @@ export default function Page() {
     }
   }, []);
 
-  const handleRoomSelect = useCallback((roomId: string) => {
+  const handleRoomSelect = useCallback(async (roomId: string) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    // Check if room is password protected
+    if (room.password_protected) {
+      setPendingRoomId(roomId);
+      setPasswordModalOpen(true);
+      setDropdownOpen(false);
+      return;
+    }
+
+    // If not password protected, navigate directly
     setSelectedRoom(roomId);
     setDropdownOpen(false);
+    
+    // Add user to room members
+    const userId = localStorage.getItem("agora_uuid");
+    if (userId) {
+      try {
+        await fetch(`${API_URL}/api/rooms/${roomId}/join`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
+        });
+      } catch (error) {
+        console.error("Failed to join room:", error);
+      }
+    }
+    
+    router.push(`/${roomId}`);
+  }, [rooms, router]);
+
+  const handlePasswordSubmit = useCallback(async (password: string) => {
+    if (!pendingRoomId) return;
+
+    setIsVerifying(true);
+    setPasswordError("");
+
+    try {
+      const response = await fetch(`${API_URL}/api/rooms/${pendingRoomId}/verify-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.valid) {
+        // Password correct, join room and navigate
+        const userId = localStorage.getItem("agora_uuid");
+        if (userId) {
+          await fetch(`${API_URL}/api/rooms/${pendingRoomId}/join`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId }),
+          });
+        }
+        
+        setPasswordModalOpen(false);
+        setSelectedRoom(pendingRoomId);
+        setPendingRoomId(null);
+        router.push(`/${pendingRoomId}`);
+      } else {
+        setPasswordError("Incorrect password. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to verify password:", error);
+      setPasswordError("Failed to verify password. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [pendingRoomId, router]);
+
+  const handlePasswordModalClose = useCallback(() => {
+    setPasswordModalOpen(false);
+    setPendingRoomId(null);
+    setPasswordError("");
   }, []);
 
+  const pendingRoomData = useMemo(() => 
+    rooms.find((r) => r.id === pendingRoomId),
+    [rooms, pendingRoomId]
+  );
   return (
     <>
       <UsernameModal onUsernameSet={setUsername} />
@@ -90,6 +178,14 @@ export default function Page() {
         open={addRoomModalOpen}
         onOpenChange={setAddRoomModalOpen}
         onAddRoom={handleAddRoom}
+      />
+      <PasswordModal
+        isOpen={passwordModalOpen}
+        onClose={handlePasswordModalClose}
+        onSubmit={handlePasswordSubmit}
+        roomName={pendingRoomData?.name || "Room"}
+        isLoading={isVerifying}
+        error={passwordError}
       />
       <div className="flex h-screen bg-background flex-col">
         {/* Header */}
