@@ -11,26 +11,28 @@ export const roomController = {
       if (is_public !== undefined) filters.is_public = parseInt(is_public);
 
       const rooms = await roomService.getAllRooms(
-        filters, 
-        parseInt(limit), 
+        filters,
+        parseInt(limit),
         parseInt(offset)
       );
-      
+
       const total = await roomService.getRoomsCount(filters);
-      
-      return reply.code(200).send({ 
-        success: true, 
+
+      return reply.code(200).send({
+        success: true,
         data: rooms,
         pagination: {
           limit: parseInt(limit),
           offset: parseInt(offset),
           total,
-          hasMore: parseInt(offset) + rooms.length < total
-        }
+          hasMore: parseInt(offset) + rooms.length < total,
+        },
       });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to fetch rooms" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to fetch rooms" });
     }
   },
 
@@ -41,13 +43,17 @@ export const roomController = {
       const room = await roomService.getRoomById(id);
 
       if (!room) {
-        return reply.code(404).send({ success: false, error: "Room not found" });
+        return reply
+          .code(404)
+          .send({ success: false, error: "Room not found" });
       }
 
       return reply.code(200).send({ success: true, data: room });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to fetch room" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to fetch room" });
     }
   },
 
@@ -57,9 +63,9 @@ export const roomController = {
       const { latitude, longitude, radius } = request.query;
 
       if (!latitude || !longitude) {
-        return reply.code(400).send({ 
-          success: false, 
-          error: "Latitude and longitude are required" 
+        return reply.code(400).send({
+          success: false,
+          error: "Latitude and longitude are required",
         });
       }
 
@@ -72,27 +78,38 @@ export const roomController = {
       return reply.code(200).send({ success: true, data: rooms });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to fetch nearby rooms" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to fetch nearby rooms" });
     }
   },
 
   // POST /rooms
   async createRoom(request, reply) {
     try {
-      const { name, password, description, type, latitude, longitude, is_public, created_by } = request.body;
+      const {
+        name,
+        password,
+        description,
+        type,
+        latitude,
+        longitude,
+        is_public,
+        created_by,
+      } = request.body;
 
       // Validation
       if (!name || !type || latitude === undefined || longitude === undefined) {
-        return reply.code(400).send({ 
-          success: false, 
-          error: "Missing required fields: name, type, latitude, longitude" 
+        return reply.code(400).send({
+          success: false,
+          error: "Missing required fields: name, type, latitude, longitude",
         });
       }
 
       if (!["text", "video", "mixed"].includes(type)) {
-        return reply.code(400).send({ 
-          success: false, 
-          error: "Invalid type. Must be: text, video, or mixed" 
+        return reply.code(400).send({
+          success: false,
+          error: "Invalid type. Must be: text, video, or mixed",
         });
       }
 
@@ -112,7 +129,9 @@ export const roomController = {
       return reply.code(201).send({ success: true, data: room });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to create room" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to create room" });
     }
   },
 
@@ -125,14 +144,19 @@ export const roomController = {
       // Check if room exists
       const existingRoom = await roomService.getRoomById(id);
       if (!existingRoom) {
-        return reply.code(404).send({ success: false, error: "Room not found" });
+        return reply
+          .code(404)
+          .send({ success: false, error: "Room not found" });
       }
 
       // Validate type if provided
-      if (roomData.type && !["text", "video", "mixed"].includes(roomData.type)) {
-        return reply.code(400).send({ 
-          success: false, 
-          error: "Invalid type. Must be: text, video, or mixed" 
+      if (
+        roomData.type &&
+        !["text", "video", "mixed"].includes(roomData.type)
+      ) {
+        return reply.code(400).send({
+          success: false,
+          error: "Invalid type. Must be: text, video, or mixed",
         });
       }
 
@@ -140,7 +164,9 @@ export const roomController = {
       return reply.code(200).send({ success: true, data: updatedRoom });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to update room" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to update room" });
     }
   },
 
@@ -151,13 +177,19 @@ export const roomController = {
 
       const deleted = await roomService.deleteRoom(id);
       if (!deleted) {
-        return reply.code(404).send({ success: false, error: "Room not found" });
+        return reply
+          .code(404)
+          .send({ success: false, error: "Room not found" });
       }
 
-      return reply.code(200).send({ success: true, message: "Room deleted successfully" });
+      return reply
+        .code(200)
+        .send({ success: true, message: "Room deleted successfully" });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to delete room" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to delete room" });
     }
   },
 
@@ -169,14 +201,18 @@ export const roomController = {
       // Check if room exists
       const room = await roomService.getRoomById(id);
       if (!room) {
-        return reply.code(404).send({ success: false, error: "Room not found" });
+        return reply
+          .code(404)
+          .send({ success: false, error: "Room not found" });
       }
 
       const members = await roomService.getRoomMembers(id);
       return reply.code(200).send({ success: true, data: members });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to fetch room members" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to fetch room members" });
     }
   },
 
@@ -187,20 +223,41 @@ export const roomController = {
       const { user_id } = request.body;
 
       if (!user_id) {
-        return reply.code(400).send({ success: false, error: "user_id is required" });
+        return reply
+          .code(400)
+          .send({ success: false, error: "user_id is required" });
       }
 
       // Check if room exists
       const room = await roomService.getRoomById(id);
       if (!room) {
-        return reply.code(404).send({ success: false, error: "Room not found" });
+        return reply
+          .code(404)
+          .send({ success: false, error: "Room not found" });
       }
 
-      await roomService.addRoomMember(id, user_id);
-      return reply.code(200).send({ success: true, message: "Joined room successfully" });
+      try {
+        console.log(`🔵 Joining room: room_id=${id}, user_id=${user_id}`);
+        const result = await roomService.addRoomMember(id, user_id);
+        console.log(`✅ Join result:`, result);
+        return reply
+          .code(200)
+          .send({ success: true, message: "Joined room successfully" });
+      } catch (error) {
+        console.error(`❌ Join error:`, error);
+        // If user already in room, just return success
+        if (error.code === "ER_DUP_ENTRY") {
+          return reply
+            .code(200)
+            .send({ success: true, message: "Already in room" });
+        }
+        throw error;
+      }
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to join room" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to join room" });
     }
   },
 
@@ -211,14 +268,20 @@ export const roomController = {
       const { user_id } = request.body;
 
       if (!user_id) {
-        return reply.code(400).send({ success: false, error: "user_id is required" });
+        return reply
+          .code(400)
+          .send({ success: false, error: "user_id is required" });
       }
 
       await roomService.removeRoomMember(id, user_id);
-      return reply.code(200).send({ success: true, message: "Left room successfully" });
+      return reply
+        .code(200)
+        .send({ success: true, message: "Left room successfully" });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to leave room" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to leave room" });
     }
   },
 
@@ -229,12 +292,16 @@ export const roomController = {
       const { password } = request.body;
 
       if (!password) {
-        return reply.code(400).send({ success: false, error: "password is required" });
+        return reply
+          .code(400)
+          .send({ success: false, error: "password is required" });
       }
 
       const room = await roomService.getRoomById(id);
       if (!room) {
-        return reply.code(404).send({ success: false, error: "Room not found" });
+        return reply
+          .code(404)
+          .send({ success: false, error: "Room not found" });
       }
 
       if (!room.is_password_protected) {
@@ -245,7 +312,9 @@ export const roomController = {
       return reply.code(200).send({ success: true, valid });
     } catch (error) {
       request.log.error(error);
-      return reply.code(500).send({ success: false, error: "Failed to verify password" });
+      return reply
+        .code(500)
+        .send({ success: false, error: "Failed to verify password" });
     }
   },
 };

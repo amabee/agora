@@ -14,7 +14,7 @@ import type { Map as LeafletMap } from "leaflet";
 import type { Room } from "@/interfaces/Room";
 import type { MapLeafletProps } from "@/interfaces/MapLeafletProps";
 
-export function MapLeaflet({ rooms, selectedRoom, onSelectRoom }: MapLeafletProps) {
+export function MapLeaflet({ rooms, selectedRoom, onSelectRoom, onRoomSelect }: MapLeafletProps) {
   const mapRef = useRef<LeafletMap>(null);
   const router = useRouter();
   const [showLabels, setShowLabels] = useState(false);
@@ -216,7 +216,7 @@ export function MapLeaflet({ rooms, selectedRoom, onSelectRoom }: MapLeafletProp
                     </div>
 
                     <button 
-                      onClick={() => router.push(`/${room.id}`)}
+                      onClick={() => onRoomSelect(room.id)}
                       className="w-full mt-4 px-4 py-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
                     >
                       Join Room

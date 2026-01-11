@@ -218,7 +218,6 @@ export const roomService = {
     const sql = `
       INSERT INTO room_members (room_id, user_id, role)
       VALUES (?, ?, 'member')
-      ON DUPLICATE KEY UPDATE joined_at = CURRENT_TIMESTAMP
     `;
     return await query(sql, [roomId, userId]);
   },
