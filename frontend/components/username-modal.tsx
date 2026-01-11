@@ -108,7 +108,10 @@ export function UsernameModal({ onUsernameSet }: UsernameModalProps) {
     setError("");
 
     try {
-      const API_URL = `http://${process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+      const API_PORT = process.env.NEXT_PUBLIC_SERVER_PORT || "8001";
+      const API_HOST = process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6";
+      const API_PROTOCOL = API_PORT === "443" || API_HOST.includes(".zrok.io") ? "https" : "http";
+      const API_URL = `${API_PROTOCOL}://${API_HOST}${API_PORT === "443" || API_PORT === "80" ? "" : `:${API_PORT}`}`;
       const response = await fetch(`${API_URL}/api/users/${trimmedUuid}`);
       
       if (!response.ok) {
@@ -156,7 +159,10 @@ export function UsernameModal({ onUsernameSet }: UsernameModalProps) {
 
     try {
       // Create user in backend - backend will generate UUID
-      const API_URL = `http://${process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+      const API_PORT = process.env.NEXT_PUBLIC_SERVER_PORT || "8001";
+      const API_HOST = process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6";
+      const API_PROTOCOL = API_PORT === "443" || API_HOST.includes(".zrok.io") ? "https" : "http";
+      const API_URL = `${API_PROTOCOL}://${API_HOST}${API_PORT === "443" || API_PORT === "80" ? "" : `:${API_PORT}`}`;
       const response = await fetch(`${API_URL}/api/users`, {
         method: 'POST',
         headers: {

@@ -10,6 +10,8 @@ export function ChatParticipantsPanel({
   participants,
   isOpen,
   onClose,
+  onRefresh,
+  isRefreshing,
 }: ChatParticipantsPanelProps) {
   const getRoleBadge = (role?: string) => {
     if (role === "admin") return <Badge variant="default" className="text-xs">Admin</Badge>
@@ -43,11 +45,29 @@ export function ChatParticipantsPanel({
               {participants.length} {participants.length === 1 ? "person" : "people"}
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              title="Refresh participants"
+            >
+              <svg 
+                className={cn("w-5 h-5", isRefreshing && "animate-spin")} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </Button>
+          </div>
         </div>
 
         {/* Participants List */}

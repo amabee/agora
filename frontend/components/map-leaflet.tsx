@@ -37,38 +37,58 @@ export function MapLeaflet({ rooms, selectedRoom, onSelectRoom, onRoomSelect }: 
     if (!mapRef.current) return;
 
     const map = mapRef.current;
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const updateLabels = () => {
-      const zoom = map.getZoom();
-      // Only show labels when zoomed in enough (15+)
-      setShowLabels(zoom >= 15);
+      if (!mounted) return;
+      
+      try {
+        // Check if map and container are ready
+        if (!map || !map.getZoom || !map.getContainer || !map.getContainer()) return;
+        if (!map._loaded) return; // Map not fully loaded yet
+        
+        const zoom = map.getZoom();
+        setShowLabels(zoom >= 15);
 
-      if (zoom >= 15) {
-        // Update label positions with debounce
-        const positions: { [key: string]: { x: number; y: number } } = {};
-        rooms.forEach((room) => {
-          const point = map.latLngToContainerPoint([room.lat, room.lng]);
-          positions[room.id] = { x: point.x, y: point.y };
-        });
-        setLabelPositions(positions);
+        if (zoom >= 15) {
+          const positions: { [key: string]: { x: number; y: number } } = {};
+          rooms.forEach((room) => {
+            try {
+              const point = map.latLngToContainerPoint([room.lat, room.lng]);
+              if (point && point.x !== undefined && point.y !== undefined) {
+                positions[room.id] = { x: point.x, y: point.y };
+              }
+            } catch (error) {
+              // Skip this marker
+            }
+          });
+          if (mounted) {
+            setLabelPositions(positions);
+          }
+        }
+      } catch (error) {
+        // Map not ready
       }
     };
 
-    // Debounce the update function
-    let timeoutId: NodeJS.Timeout;
     const debouncedUpdate = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(updateLabels, 100);
+      timeoutId = setTimeout(updateLabels, 150);
     };
 
-    map.on('zoomend', updateLabels);
-    map.on('moveend', debouncedUpdate);
-    
-    // Give the map time to initialize
-    setTimeout(updateLabels, 500);
+    // Wait for map to be fully initialized
+    const initTimeout = setTimeout(() => {
+      if (!mounted) return;
+      map.on('zoomend', updateLabels);
+      map.on('moveend', debouncedUpdate);
+      updateLabels();
+    }, 1000);
 
     return () => {
+      mounted = false;
       clearTimeout(timeoutId);
+      clearTimeout(initTimeout);
       map.off('zoomend', updateLabels);
       map.off('moveend', debouncedUpdate);
     };

@@ -8,4 +8,5 @@ export interface VideoParticipant {
   isPinned?: boolean
   hasVideo?: boolean
   isNew?: boolean
+  stream?: MediaStream
 }

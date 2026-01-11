@@ -19,6 +19,17 @@ const app = Fastify({
   },
 });
 
+// Add support for JSON body parsing
+app.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+  try {
+    const json = JSON.parse(body);
+    done(null, json);
+  } catch (err) {
+    err.statusCode = 400;
+    done(err, undefined);
+  }
+});
+
 async function start() {
   try {
     // register plugins 😊
@@ -28,7 +39,6 @@ async function start() {
         verifyClient: (info, next) => {
           // Allow WebSocket connections from allowed origins
           const origin = info.origin || info.req.headers.origin;
-          console.log("WebSocket origin:", origin);
           next(true); // Allow for now, CORS plugin handles security
         }
       }

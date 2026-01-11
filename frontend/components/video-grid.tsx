@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { VideoParticipant } from "@/interfaces/VideoParticipant";
@@ -260,8 +260,16 @@ interface VideoTileProps {
   size?: "small" | "medium" | "large";
 }
 
-function VideoTile({ participant, onPin, isPinned }: VideoTileProps) {
+function VideoTile({ participant, onPin, isPinned, isLocal }: VideoTileProps) {
   const [hovered, setHovered] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Attach stream to video element
+  useEffect(() => {
+    if (videoRef.current && participant.stream) {
+      videoRef.current.srcObject = participant.stream;
+    }
+  }, [participant.stream]);
 
   const getAvatarColor = (name: string) => {
     const colors = [
@@ -296,7 +304,7 @@ function VideoTile({ participant, onPin, isPinned }: VideoTileProps) {
       onMouseLeave={() => setHovered(false)}
     >
       {/* Video / Avatar */}
-      {participant.isVideoOff || !participant.hasVideo ? (
+      {participant.isVideoOff || !participant.stream ? (
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className={cn(
@@ -308,7 +316,13 @@ function VideoTile({ participant, onPin, isPinned }: VideoTileProps) {
           </div>
         </div>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900" />
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted={isLocal}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       )}
 
       {/* Speaking indicator */}

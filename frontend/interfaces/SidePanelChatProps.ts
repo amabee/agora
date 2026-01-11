@@ -10,5 +10,5 @@ export interface SidePanelChatProps {
   onClose: () => void
   participantCount: number
   defaultTab?: "chat" | "participants"
-  onTabChange?: (tab: "chat" | "participants") => void
-}
+  onTabChange?: (tab: "chat" | "participants") => void  onRefreshParticipants?: () => void;
+  isRefreshingParticipants?: boolean;}
