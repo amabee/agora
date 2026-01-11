@@ -20,6 +20,8 @@ export function SidePanelChat({
   participantCount,
   defaultTab = "chat",
   onTabChange,
+  onRefreshParticipants,
+  isRefreshingParticipants,
 }: SidePanelChatProps) {
   const [activeTab, setActiveTab] = useState<"chat" | "participants">(defaultTab)
 
@@ -72,16 +74,32 @@ export function SidePanelChat({
                 Participants
               </Button>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10 rounded-full" 
-              onClick={onClose}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </Button>
+            <div className="flex items-center gap-1">
+              {activeTab === "participants" && onRefreshParticipants && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10 rounded-full" 
+                  onClick={onRefreshParticipants}
+                  disabled={isRefreshingParticipants}
+                  title="Refresh participants"
+                >
+                  <svg className={cn("w-4 h-4", isRefreshingParticipants && "animate-spin")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10 rounded-full" 
+                onClick={onClose}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </Button>
+            </div>
           </div>
 
           {/* Content */}

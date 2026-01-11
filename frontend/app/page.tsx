@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { MapLeaflet } from "@/components/map-leaflet";
+import dynamic from "next/dynamic";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,23 @@ import { Plus, Loader2 } from "lucide-react";
 import { useRooms, useMapRooms, useCreateRoom } from "@/hooks/useRooms";
 import type { Room } from "@/interfaces/Room";
 
-const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+// Dynamic import to prevent SSR issues with Leaflet
+const MapLeaflet = dynamic(
+  () => import("@/components/map-leaflet").then((mod) => mod.MapLeaflet),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-muted">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+);
+
+const API_PORT = process.env.NEXT_PUBLIC_SERVER_PORT || "8001";
+const API_HOST = process.env.NEXT_PUBLIC_SERVER_URL || "localhost";
+const API_PROTOCOL = API_PORT === "443" || API_HOST.includes(".zrok.io") ? "https" : "http";
+const API_URL = `${API_PROTOCOL}://${API_HOST}${API_PORT === "443" || API_PORT === "80" ? "" : `:${API_PORT}`}`;
 
 export default function Page() {
   const router = useRouter();
@@ -326,6 +342,7 @@ export default function Page() {
         {/* Main Content Area - Just the Map */}
         <div className="flex-1 overflow-hidden">
           <MapLeaflet
+            key="main-map"
             rooms={mapRooms || []}
             selectedRoom={selectedRoom}
             onSelectRoom={setSelectedRoom}

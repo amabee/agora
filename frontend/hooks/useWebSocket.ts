@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-const WS_URL = `ws://${process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}/ws`;
+const WS_PORT = process.env.NEXT_PUBLIC_SERVER_PORT || "8001";
+const WS_HOST = process.env.NEXT_PUBLIC_WS_HOST || "192.168.1.6";
+const WS_PROTOCOL = WS_PORT === "443" || WS_HOST.includes(".zrok.io") ? "wss" : "ws";
+const WS_URL = `${WS_PROTOCOL}://${WS_HOST}${WS_PORT === "443" || WS_PORT === "80" ? "" : `:${WS_PORT}`}/ws`;
 
 interface UseWebSocketProps {
   roomId: string;

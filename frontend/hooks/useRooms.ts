@@ -1,7 +1,16 @@
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { Room } from "@/interfaces/Room";
 
-const API_URL = `http://${process.env.NEXT_PUBLIC_SERVER_URL || "localhost"}:${process.env.NEXT_PUBLIC_SERVER_PORT || "8001"}`;
+const API_PORT = process.env.NEXT_PUBLIC_SERVER_PORT || "8001";
+const API_HOST = process.env.NEXT_PUBLIC_SERVER_URL || "localhost";
+const API_PROTOCOL =
+  API_PORT === "443" || API_HOST.includes(".zrok.io") ? "https" : "http";
+const API_URL = `${API_PROTOCOL}://${API_HOST}`;
 
 // Fetch all rooms for map display (no pagination)
 async function fetchAllRooms(): Promise<Room[]> {
@@ -10,7 +19,7 @@ async function fetchAllRooms(): Promise<Room[]> {
     throw new Error("Failed to fetch rooms");
   }
   const result = await response.json();
-  
+
   // Map backend response to frontend Room interface
   return result.data.map((room: any) => ({
     id: room.id.toString(),
@@ -26,14 +35,20 @@ async function fetchAllRooms(): Promise<Room[]> {
 }
 
 // Fetch rooms with pagination for dropdown
-async function fetchRooms({ pageParam = 0 }): Promise<{ rooms: Room[]; nextOffset: number | undefined; hasMore: boolean }> {
+async function fetchRooms({ pageParam = 0 }): Promise<{
+  rooms: Room[];
+  nextOffset: number | undefined;
+  hasMore: boolean;
+}> {
   const limit = 10;
-  const response = await fetch(`${API_URL}/api/rooms?limit=${limit}&offset=${pageParam}`);
+  const response = await fetch(
+    `${API_URL}/api/rooms?limit=${limit}&offset=${pageParam}`
+  );
   if (!response.ok) {
     throw new Error("Failed to fetch rooms");
   }
   const result = await response.json();
-  
+
   // Map backend response to frontend Room interface
   const rooms = result.data.map((room: any) => ({
     id: room.id.toString(),
@@ -84,7 +99,7 @@ async function createRoom(roomData: {
   }
   const result = await response.json();
   const room = result.data;
-  
+
   // Map backend response to frontend Room interface
   return {
     id: room.id.toString(),

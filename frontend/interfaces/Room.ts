@@ -1,7 +1,7 @@
 export interface Room {
   id: string;
   name: string;
-  type: "text" | "video" | "text-video";
+  type: "text" | "video" | "mixed";
   participants: number;
   active: boolean;
   password?: string;

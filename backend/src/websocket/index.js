@@ -7,20 +7,19 @@ const roomConnections = new Map();
 export async function setupWebSocket(app) {
   app.register(async function (fastify) {
     fastify.get('/ws', { websocket: true }, (socket, request) => {
-      console.log('WebSocket connection attempt from:', request.headers.origin);
-      console.log('WebSocket headers:', request.headers);
+    
       
       let currentRoomId = null;
       let currentUserId = null;
       let currentUsername = null;
 
-      console.log('New WebSocket connection established');
+   
 
       // Handle incoming messages
       socket.on('message', async (message) => {
         try {
           const data = JSON.parse(message.toString());
-          console.log('Received message:', data.type, 'from:', data.username || 'unknown');
+          
 
           switch (data.type) {
             case 'join': {
@@ -61,12 +60,29 @@ export async function setupWebSocket(app) {
               }
               roomConnections.get(roomId).add(socket);
 
-              // Send confirmation to user
+              // Get list of current users in the room (before broadcasting)
+              const currentUsers = [];
+              const roomSockets = roomConnections.get(roomId);
+              for (const clientSocket of roomSockets) {
+                if (clientSocket !== socket && clientSocket.userId && clientSocket.username) {
+                  currentUsers.push({
+                    userId: clientSocket.userId,
+                    username: clientSocket.username
+                  });
+                }
+              }
+
+              // Store user info on socket for retrieval
+              socket.userId = userId;
+              socket.username = username;
+
+              // Send confirmation with list of existing users
               try {
                 socket.send(JSON.stringify({
                   type: 'joined',
                   roomId,
-                  message: 'Successfully joined room'
+                  message: 'Successfully joined room',
+                  existingUsers: currentUsers
                 }));
               } catch (error) {
                 console.error('Error sending joined confirmation:', error);
@@ -138,7 +154,7 @@ export async function setupWebSocket(app) {
                   data: message
                 });
 
-                console.log(`Message sent in room ${currentRoomId} by ${currentUsername}`);
+               
               } catch (messageError) {
                 console.error('Error sending message:', messageError);
                 socket.send(JSON.stringify({
@@ -175,10 +191,43 @@ export async function setupWebSocket(app) {
                   timestamp: new Date().toISOString()
                 }, socket);
 
-                console.log(`User ${currentUsername} left room ${currentRoomId}`);
                 currentRoomId = null;
                 currentUserId = null;
                 currentUsername = null;
+              }
+              break;
+            }
+
+            case 'webrtc-signal': {
+              // Relay WebRTC signaling messages
+              const { to, signal } = data;
+              
+              if (!currentRoomId || !currentUserId) {
+                socket.send(JSON.stringify({
+                  type: 'error',
+                  message: 'Must join a room first'
+                }));
+                return;
+              }
+
+              // Find the target socket
+              const roomSockets = roomConnections.get(currentRoomId);
+              if (roomSockets) {
+                for (const clientSocket of roomSockets) {
+                  if (clientSocket.userId === to) {
+                    try {
+                      clientSocket.send(JSON.stringify({
+                        type: 'webrtc-signal',
+                        from: currentUserId,
+                        signal: signal
+                      }));
+                      console.log(`🔄 Relayed WebRTC signal from ${currentUserId} to ${to}`);
+                    } catch (error) {
+                      console.error('Error relaying WebRTC signal:', error);
+                    }
+                    break;
+                  }
+                }
               }
               break;
             }
@@ -223,7 +272,6 @@ export async function setupWebSocket(app) {
             timestamp: new Date().toISOString()
           }, socket);
 
-          console.log(`User ${currentUsername} disconnected from room ${currentRoomId}`);
         }
         console.log('WebSocket connection closed');
       });
