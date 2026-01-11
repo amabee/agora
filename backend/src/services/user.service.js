@@ -41,4 +41,11 @@ export const userService = {
     const sql = "SELECT id, username, created_at, last_active FROM users ORDER BY created_at DESC";
     return await query(sql);
   },
+
+  // Remove user from all rooms
+  async removeFromAllRooms(userId) {
+    const sql = "DELETE FROM room_members WHERE user_id = ?";
+    const result = await query(sql, [userId]);
+    return result.affectedRows;
+  },
 };

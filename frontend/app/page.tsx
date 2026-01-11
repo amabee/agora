@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MapLeaflet } from "@/components/map-leaflet";
 import {
@@ -96,8 +96,12 @@ export default function Page() {
   }, []);
 
   const handleRoomSelect = useCallback(async (roomId: string) => {
-    const room = rooms.find((r) => r.id === roomId);
-    if (!room) return;
+    // Look in both dropdown rooms and map rooms
+    const room = dropdownRooms.find((r) => r.id === roomId) || mapRooms?.find((r) => r.id === roomId);
+    if (!room) {
+      console.error("Room not found:", roomId);
+      return;
+    }
 
     // Check if room is password protected
     if (room.password_protected) {
@@ -115,18 +119,20 @@ export default function Page() {
     const userId = localStorage.getItem("agora_uuid");
     if (userId) {
       try {
+        console.log(`🟢 Main page joining room: ${roomId}`);
         await fetch(`${API_URL}/api/rooms/${roomId}/join`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId }),
         });
+        console.log(`✅ Join API called from main page`);
       } catch (error) {
         console.error("Failed to join room:", error);
       }
     }
     
     router.push(`/${roomId}`);
-  }, [mapRooms, router]);
+  }, [dropdownRooms, mapRooms, router]);
 
   const handlePasswordSubmit = useCallback(async (password: string) => {
     if (!pendingRoomId) return;
@@ -323,6 +329,7 @@ export default function Page() {
             rooms={mapRooms || []}
             selectedRoom={selectedRoom}
             onSelectRoom={setSelectedRoom}
+            onRoomSelect={handleRoomSelect}
           />
         </div>
       </div>

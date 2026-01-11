@@ -39,6 +39,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [elapsedTime, setElapsedTime] = useState(83); // Starting at 1:23
+  const [isLeavingRoom, setIsLeavingRoom] = useState(false);
 
   useEffect(() => {
     // Unwrap the params promise
@@ -55,50 +56,53 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     typeof window !== 'undefined' ? localStorage.getItem("agora_username") || "Anonymous" : "Anonymous"
   );
 
-  // Prevent browser back button navigation
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-
-    const handlePopState = (e: PopStateEvent) => {
-      e.preventDefault();
-      window.history.pushState(null, '', window.location.href);
-      // Optionally show a message or do nothing
-    };
-
-    // Push current state to prevent back navigation
-    window.history.pushState(null, '', window.location.href);
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, []);
-
-  // Add user to room members on mount
+  // Cleanup on unmount - remove user from room when navigating away
   useEffect(() => {
     if (!roomId || !currentUserId) return;
 
-    const joinRoom = async () => {
-      try {
-        await fetch(`${API_URL}/api/rooms/${roomId}/join`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: currentUserId }),
-        });
-        console.log("✅ Joined room members");
-      } catch (error) {
-        console.error("Failed to join room:", error);
+    let cleanupExecuted = false;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!cleanupExecuted && !isLeavingRoom) {
+        // Attempt to leave before closing
+        const data = JSON.stringify({ user_id: currentUserId });
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon(`${API_URL}/api/rooms/${roomId}/leave`, blob);
+        cleanupExecuted = true;
       }
     };
 
-    joinRoom();
-  }, [roomId, currentUserId]);
+    const handleVisibilityChange = () => {
+      if (document.hidden && !cleanupExecuted && !isLeavingRoom) {
+        // Page is being hidden/closed, cleanup
+        const data = JSON.stringify({ user_id: currentUserId });
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon(`${API_URL}/api/rooms/${roomId}/leave`, blob);
+        cleanupExecuted = true;
+        console.log("🧹 Visibility cleanup: Left room");
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup: Remove user from room members when component unmounts
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Final cleanup on unmount (only if not already done and not leaving intentionally)
+      if (!cleanupExecuted && !isLeavingRoom) {
+        cleanupExecuted = true;
+        const data = JSON.stringify({ user_id: currentUserId });
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon(`${API_URL}/api/rooms/${roomId}/leave`, blob);
+        console.log("🧹 Unmount cleanup: Left room");
+      }
+    };
+  }, [roomId, currentUserId, isLeavingRoom]);
+
+  // No need to join here - already joined from main page before navigation
 
   // Fetch room members
   useEffect(() => {
@@ -275,6 +279,9 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   // Define all callbacks before conditional returns
   const handleLeaveRoom = useCallback(async () => {
     if (!roomId || !currentUserId) return;
+
+    // Set flag to allow navigation
+    setIsLeavingRoom(true);
 
     try {
       // Remove user from room members

@@ -12,4 +12,7 @@ export default async function userRoutes(app) {
 
   // Create user
   app.post("/api/users", userController.createUser);
+
+  // Leave all rooms (cleanup)
+  app.post("/api/users/:id/leave-all-rooms", userController.leaveAllRooms);
 }

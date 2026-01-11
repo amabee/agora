@@ -80,4 +80,21 @@ export const userController = {
       return reply.code(500).send({ success: false, error: "Failed to fetch user" });
     }
   },
+
+  // POST /users/:id/leave-all-rooms
+  async leaveAllRooms(request, reply) {
+    try {
+      const { id } = request.params;
+
+      const result = await userService.removeFromAllRooms(id);
+      return reply.code(200).send({ 
+        success: true, 
+        message: `Removed from ${result} room(s)`,
+        count: result
+      });
+    } catch (error) {
+      request.log.error(error);
+      return reply.code(500).send({ success: false, error: "Failed to leave rooms" });
+    }
+  },
 };
