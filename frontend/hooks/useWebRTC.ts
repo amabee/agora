@@ -35,7 +35,9 @@ export function useWebRTC({
 
   // Get user media (camera + microphone)
   const startLocalStream = useCallback(async () => {
+    console.log('🎥 Attempting to start local stream...');
     try {
+      console.log('🎥 Requesting getUserMedia...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
@@ -47,15 +49,28 @@ export function useWebRTC({
         },
       });
 
+      console.log('✅ getUserMedia successful, stream:', stream);
+      console.log('📹 Video tracks:', stream.getVideoTracks().length);
+      console.log('🎤 Audio tracks:', stream.getAudioTracks().length);
+
       localStreamRef.current = stream;
       setLocalStream(stream);
       setIsCameraOn(true);
       setIsMicOn(true);
       
-      console.log('📹 Local stream started');
+      console.log('📹 Local stream started and state updated');
       return stream;
-    } catch (error) {
-      console.error('Failed to get user media:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to get user media:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      if (error.name === 'NotAllowedError') {
+        console.error('❌ Camera/microphone permission denied by user');
+      } else if (error.name === 'NotFoundError') {
+        console.error('❌ No camera/microphone found');
+      } else if (error.name === 'NotReadableError') {
+        console.error('❌ Camera/microphone is already in use');
+      }
       return null;
     }
   }, []);

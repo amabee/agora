@@ -78,7 +78,6 @@ export function useWebSocket({
           // Handle joined confirmation
           if (data.type === 'joined' && !hasJoinedRoom.current) {
             hasJoinedRoom.current = true;
-            console.log("✅ Successfully joined room");
             onConnectRef.current?.();
           }
           

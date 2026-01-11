@@ -186,7 +186,6 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     username: currentUsername,
     enabled: !!roomId,
     onMessage: (data) => {
-      console.log("Received WebSocket message:", data);
       
       // Handle WebRTC signaling
       if (data.type === "webrtc-signal" && webrtcSignalHandlerRef.current) {
@@ -268,6 +267,13 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
         // Update participant count if needed
       } else if (data.type === "joined") {
         console.log("📥 Joined room, existing users:", data.existingUsers);
+        console.log("📥 My user ID:", currentUserId);
+        console.log("📥 Room type:", room?.type);
+        console.log("📥 Local stream available:", !!webrtc.localStream);
+        
+        // Store existing users for when stream becomes ready
+        existingUsersRef.current = data.existingUsers || [];
+        hasConnectedToPeersRef.current = false; // Reset connection flag
         
         // Merge yourself with existing users in participants list
         setParticipants(prev => {
@@ -298,36 +304,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
           return merged;
         });
         
-        // Establish WebRTC connections with existing users ONLY if we have a local stream
-        const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed' || room.type === 'text-video');
-        if (isVideoRoom) {
-          // Wait for local stream to be ready before connecting to peers
-          let retryCount = 0;
-          const maxRetries = 10;
-          const connectToPeers = () => {
-            if (webrtc.localStream) {
-              console.log("🎥 Local stream ready, connecting to existing users...");
-              const existingUserIds = new Set((data.existingUsers || []).map((u: any) => u.userId));
-              existingUserIds.forEach((userId: string) => {
-                if (userId !== currentUserId) {
-                  try {
-                    console.log("🎥 Initiating WebRTC connection with existing user:", userId);
-                    webrtc.addPeer(userId);
-                  } catch (error) {
-                    console.error("Failed to add peer:", userId, error);
-                  }
-                }
-              });
-            } else if (retryCount < maxRetries) {
-              retryCount++;
-              console.log(`⏳ Waiting for local stream before connecting to peers... (${retryCount}/${maxRetries})`);
-              setTimeout(connectToPeers, 500);
-            } else {
-              console.warn("⚠️ Gave up waiting for local stream after", maxRetries, "retries");
-            }
-          };
-          connectToPeers();
-        }
+        // Note: Peer connections will be established by the useEffect that watches webrtc.localStream
       } else if (data.type === "user_joined") {
         console.log("👤 User joined:", data.username, data.userId);
         console.log("👤 Current participants before:", participants.length);
@@ -397,10 +374,10 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
       }
     },
     onConnect: () => {
-      console.log("Connected to room:", roomId);
+      // console.log("Connected to room:", roomId);
     },
     onDisconnect: () => {
-      console.log("Disconnected from room:", roomId);
+      // console.log("Disconnected from room:", roomId);
     },
   });
 
@@ -417,14 +394,53 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 
   // Start local stream when connected to video/mixed room (only once)
   const hasStartedStreamRef = useRef(false);
+  const hasConnectedToPeersRef = useRef(false);
+  const existingUsersRef = useRef<any[]>([]);
+  
   useEffect(() => {
     const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed' || room.type === 'text-video');
+    console.log('🔍 Stream start check:', {
+      isConnected,
+      roomType: room?.type,
+      isVideoRoom,
+      hasStarted: hasStartedStreamRef.current,
+      hasLocalStream: !!webrtc.localStream
+    });
+    
     if (isConnected && isVideoRoom && !hasStartedStreamRef.current && !webrtc.localStream) {
       console.log('🎥 Starting local stream for room type:', room.type);
       hasStartedStreamRef.current = true;
-      webrtc.startLocalStream();
+      webrtc.startLocalStream().then(stream => {
+        if (stream) {
+          console.log('✅ Local stream started successfully');
+        } else {
+          console.error('❌ Failed to start local stream');
+          hasStartedStreamRef.current = false; // Allow retry
+        }
+      });
     }
   }, [isConnected, room, webrtc.localStream]);
+
+  // Connect to existing peers when local stream becomes available
+  useEffect(() => {
+    const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed' || room.type === 'text-video');
+    
+    if (isVideoRoom && webrtc.localStream && !hasConnectedToPeersRef.current && existingUsersRef.current.length > 0) {
+      console.log('🎥 Local stream ready! Connecting to', existingUsersRef.current.length, 'existing users...');
+      hasConnectedToPeersRef.current = true;
+      
+      existingUsersRef.current.forEach((user: any) => {
+        if (user.userId !== currentUserId) {
+          try {
+            console.log('🎥 Creating peer connection with:', user.username, user.userId);
+            webrtc.addPeer(user.userId);
+          } catch (error) {
+            console.error('Failed to add peer:', user.userId, error);
+          }
+        }
+      });
+    }
+  }, [webrtc.localStream, room, currentUserId]);
 
   // Create stable peer tracking values
   const peerIdsString = webrtc.peers.map(p => p.peerId).sort().join(',');
@@ -432,6 +448,15 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 
   // Update video participants from WebRTC peers
   const videoParticipantsFromWebRTC = useMemo(() => {
+    console.log('🎬 Building video participants:');
+    console.log('  - Local stream:', webrtc.localStream ? 'available' : 'none');
+    console.log('  - WebRTC peers count:', webrtc.peers.length);
+    console.log('  - WebRTC peers:', webrtc.peers.map(p => ({ 
+      id: p.peerId, 
+      hasStream: !!p.stream,
+      streamId: p.stream?.id 
+    })));
+
     const localParticipant: VideoParticipant = {
       id: currentUserId,
       username: currentUsername + " (You)",
@@ -446,6 +471,11 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     const remoteParticipants: VideoParticipant[] = webrtc.peers.map(peer => {
       const participant = participants.find(p => p.id === peer.peerId);
       const username = participant?.username || 'Unknown';
+      console.log(`  - Remote peer ${username} (${peer.peerId}):`, {
+        hasStream: !!peer.stream,
+        streamId: peer.stream?.id,
+        streamTracks: peer.stream?.getTracks().length
+      });
       return {
         id: peer.peerId,
         username: username,
@@ -466,7 +496,8 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     webrtc.isMicOn, 
     webrtc.isCameraOn, 
     currentUserId, 
-    currentUsername
+    currentUsername,
+    participants
   ]);
 
   useEffect(() => {
@@ -666,7 +697,6 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
     type: room.type,
   };
 
-  console.log('🏠 Room data:', roomData);
 
   return (
     <div className="h-screen bg-[#0f0f0f] overflow-hidden">
@@ -788,7 +818,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
               <div className="flex-1 p-4 min-h-0 overflow-hidden">
                 <VideoGrid
                   participants={videoParticipants}
-                  localUserId="current-user"
+                  localUserId={currentUserId}
                 />
               </div>
 
