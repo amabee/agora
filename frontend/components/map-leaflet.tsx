@@ -46,7 +46,7 @@ export function MapLeaflet({ rooms, selectedRoom, onSelectRoom, onRoomSelect }: 
       try {
         // Check if map and container are ready
         if (!map || !map.getZoom || !map.getContainer || !map.getContainer()) return;
-        if (!map._loaded) return; // Map not fully loaded yet
+        if (!(map as any)._loaded) return; // Map not fully loaded yet
         
         const zoom = map.getZoom();
         setShowLabels(zoom >= 15);

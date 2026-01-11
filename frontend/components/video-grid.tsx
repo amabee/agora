@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { VideoParticipant } from "@/interfaces/VideoParticipant";
 import type { VideoGridProps } from "@/interfaces/VideoGridProps";
@@ -11,237 +10,134 @@ export type { VideoParticipant };
 export function VideoGrid({
   participants,
   localUserId = "current-user",
-  participantsPerPage = 8,
 }: VideoGridProps) {
   const [pinnedUserId, setPinnedUserId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const pinnedParticipant = participants.find((p) => p.id === pinnedUserId);
   const otherParticipants = participants.filter((p) => p.id !== pinnedUserId);
-  const displayParticipants = pinnedParticipant
-    ? otherParticipants
-    : participants;
 
-  const totalPages = Math.ceil(
-    displayParticipants.length / participantsPerPage
-  );
-  const startIndex = currentPage * participantsPerPage;
-
-  // Show 7 tiles + 1 overflow tile if there are more participants
-  const hasMoreParticipants = displayParticipants.length > participantsPerPage;
-  const visibleCount =
-    hasMoreParticipants && currentPage === 0 ? 7 : participantsPerPage;
-  const paginatedParticipants = displayParticipants.slice(
-    startIndex,
-    startIndex + visibleCount
-  );
-  const remainingCount =
-    displayParticipants.length - (startIndex + visibleCount);
-
-  const goToPrevPage = () => setCurrentPage((p) => Math.max(0, p - 1));
-  const goToNextPage = () =>
-    setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
-
-  // Smooth transition when pinning/unpinning
-  const handlePin = (userId: string | null) => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setPinnedUserId(userId);
-      setTimeout(() => setIsTransitioning(false), 50);
-    }, 150);
-  };
-
-  return (
-    <div className="w-full h-full flex flex-col">
-      {/* Grid area with arrows */}
-      <div className="flex-1 flex items-center gap-2 px-2 min-h-0">
-        {/* Left arrow - hidden in focused mode */}
-        {!pinnedParticipant && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={goToPrevPage}
-            disabled={currentPage === 0}
-            className={cn(
-              "h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white shrink-0",
-              currentPage === 0 && "opacity-30 cursor-not-allowed"
-            )}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </Button>
-        )}
-
-        {/* Grid */}
-        <div 
-          className={cn(
-            "flex-1 h-full py-2 min-h-0 transition-opacity duration-200 ease-out",
-            isTransitioning ? "opacity-0" : "opacity-100"
-          )}
-        >
-          {pinnedParticipant ? (
-            /* ================= PINNED LAYOUT ================= */
-            <div 
-              className="flex gap-3 h-full"
-              style={{
-                animation: !isTransitioning ? "smoothFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards" : "none"
-              }}
-            >
-              {/* Main video */}
-              <div 
-                className="flex-1 rounded-xl overflow-hidden bg-[#1a2535]"
-                style={{
-                  animation: !isTransitioning ? "smoothExpandIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards" : "none"
-                }}
-              >
-                <VideoTile
-                  participant={pinnedParticipant}
-                  isLocal={pinnedParticipant.id === localUserId}
-                  onPin={() => handlePin(null)}
-                  isPinned
-                />
-              </div>
-
-              {/* Sidebar - 2 columns grid */}
-              {otherParticipants.length > 0 && (
-                <div 
-                  className="w-96 h-full overflow-y-auto pr-2 scrollbar-thin"
-                  style={{
-                    animation: !isTransitioning ? "smoothSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards" : "none"
-                  }}
-                >
-                  <div className="grid grid-cols-2 gap-3">
-                    {otherParticipants.map((p, index) => (
-                      <div
-                        key={p.id}
-                        className="aspect-square rounded-xl object-cover overflow-hidden bg-[#1a2535] transition-all duration-200 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-white/30"
-                        style={{
-                          animation: !isTransitioning ? `smoothTileIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${index * 40}ms forwards` : "none",
-                          opacity: 0
-                        }}
-                      >
-                        <VideoTile
-                          participant={p}
-                          isLocal={p.id === localUserId}
-                          onPin={() => handlePin(p.id)}
-                          size="small"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* ================= 4x2 GRID LAYOUT ================= */
-            <div 
-              className="w-full h-full grid grid-cols-4 grid-rows-2 gap-2"
-              style={{
-                animation: !isTransitioning ? "smoothGridIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards" : "none"
-              }}
-            >
-              {paginatedParticipants.map((p, index) => (
-                <div
-                  key={p.id}
-                  className={cn(
-                    "rounded-xl overflow-hidden bg-[#1a2535] transition-all duration-200 ease-out hover:scale-[1.03] hover:ring-2 hover:ring-white/30",
-                    p.isNew && "animate-bounce-scale"
-                  )}
-                  style={{
-                    animation: !isTransitioning && !p.isNew 
-                      ? `smoothTileIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) ${index * 25}ms forwards` 
-                      : p.isNew 
-                      ? "bounceScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)" 
-                      : "none",
-                    opacity: p.isNew ? 1 : 0
-                  }}
-                >
-                  <VideoTile
-                    participant={p}
-                    isLocal={p.id === localUserId}
-                    onPin={() => handlePin(p.id)}
-                  />
-                </div>
-              ))}
-
-              {/* +X more tile */}
-              {hasMoreParticipants &&
-                currentPage === 0 &&
-                remainingCount > 0 && (
-                  <div
-                    className="rounded-xl overflow-hidden bg-[#1a2535] transition-all duration-200 ease-out flex items-center justify-center cursor-pointer hover:bg-[#243447] hover:scale-[1.03]"
-                    onClick={goToNextPage}
-                    style={{
-                      animation: !isTransitioning ? `smoothTileIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) ${7 * 25}ms forwards` : "none",
-                      opacity: 0
-                    }}
-                  >
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-white">
-                        +{remainingCount}
-                      </div>
-                      <div className="text-sm text-white/60">more</div>
-                    </div>
-                  </div>
-                )}
-            </div>
-          )}
+  // Pinned/Focused view
+  if (pinnedParticipant) {
+    return (
+      <div className="w-full h-full flex gap-3 p-2 md:p-4">
+        {/* Main large video */}
+        <div className="flex-1 rounded-lg overflow-hidden">
+          <VideoTile
+            participant={pinnedParticipant}
+            isLocal={pinnedParticipant.id === localUserId}
+            onPin={() => setPinnedUserId(null)}
+            isPinned={true}
+          />
         </div>
 
-        {/* Right arrow - hidden in focused mode */}
-        {!pinnedParticipant && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={goToNextPage}
-            disabled={currentPage === totalPages - 1}
-            className={cn(
-              "h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white shrink-0",
-              currentPage === totalPages - 1 && "opacity-30 cursor-not-allowed"
-            )}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m9 18 6-6-6-6" />
-            </svg>
-          </Button>
+        {/* Sidebar with other participants */}
+        {otherParticipants.length > 0 && (
+          <div className="w-48 md:w-64 flex flex-col gap-2 md:gap-3 overflow-y-auto">
+            {otherParticipants.map((participant) => (
+              <div key={participant.id} className="aspect-video rounded-lg overflow-hidden">
+                <VideoTile
+                  participant={participant}
+                  isLocal={participant.id === localUserId}
+                  onPin={() => setPinnedUserId(participant.id)}
+                />
+              </div>
+            ))}
+          </div>
         )}
       </div>
+    );
+  }
 
-      {/* Pagination dots */}
-      {!pinnedParticipant && totalPages > 1 && (
-        <div className="flex justify-center gap-2 pb-3">
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentPage(i)}
-              className={cn(
-                "w-2 h-2 rounded-full transition-colors",
-                i === currentPage ? "bg-white" : "bg-white/30 hover:bg-white/60"
-              )}
+  // Grid layouts based on participant count
+  return (
+    <div className="w-full h-full flex items-center justify-center p-2 md:p-4">
+      {participants.length === 2 ? (
+        // 2 people: side by side
+        <div className="w-full h-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
+          {participants.map((participant) => (
+            <VideoTile 
+              key={participant.id} 
+              participant={participant} 
+              isLocal={participant.id === localUserId}
+              onPin={() => setPinnedUserId(participant.id)}
             />
           ))}
+        </div>
+      ) : participants.length === 3 ? (
+        // 3 people: 2 equal on top, 1 equal below
+        <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-2 md:gap-4">
+          <VideoTile 
+            participant={participants[0]} 
+            isLocal={participants[0].id === localUserId}
+            onPin={() => setPinnedUserId(participants[0].id)}
+          />
+          <VideoTile 
+            participant={participants[1]} 
+            isLocal={participants[1].id === localUserId}
+            onPin={() => setPinnedUserId(participants[1].id)}
+          />
+          <div className="col-span-2">
+            <VideoTile 
+              participant={participants[2]} 
+              isLocal={participants[2].id === localUserId}
+              onPin={() => setPinnedUserId(participants[2].id)}
+            />
+          </div>
+        </div>
+      ) : participants.length === 4 ? (
+        // 4 people: 2x2 grid
+        <div className="w-full h-full grid grid-cols-2 gap-2 md:gap-4">
+          {participants.map((participant) => (
+            <VideoTile 
+              key={participant.id} 
+              participant={participant} 
+              isLocal={participant.id === localUserId}
+              onPin={() => setPinnedUserId(participant.id)}
+            />
+          ))}
+        </div>
+      ) : participants.length === 5 ? (
+        // 5 people: 3 on top, 2 on bottom
+        <div className="w-full h-full flex flex-col gap-2 md:gap-4">
+          <div className="flex-1 grid grid-cols-3 gap-2 md:gap-4">
+            <VideoTile participant={participants[0]} isLocal={participants[0].id === localUserId} onPin={() => setPinnedUserId(participants[0].id)} />
+            <VideoTile participant={participants[1]} isLocal={participants[1].id === localUserId} onPin={() => setPinnedUserId(participants[1].id)} />
+            <VideoTile participant={participants[2]} isLocal={participants[2].id === localUserId} onPin={() => setPinnedUserId(participants[2].id)} />
+          </div>
+          <div className="flex-1 grid grid-cols-2 gap-2 md:gap-4 px-4 md:px-16">
+            <VideoTile participant={participants[3]} isLocal={participants[3].id === localUserId} onPin={() => setPinnedUserId(participants[3].id)} />
+            <VideoTile participant={participants[4]} isLocal={participants[4].id === localUserId} onPin={() => setPinnedUserId(participants[4].id)} />
+          </div>
+        </div>
+      ) : participants.length === 6 ? (
+        // 6 people: 3x2 grid
+        <div className="w-full h-full grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
+          {participants.map((participant) => (
+            <VideoTile key={participant.id} participant={participant} isLocal={participant.id === localUserId} onPin={() => setPinnedUserId(participant.id)} />
+          ))}
+        </div>
+      ) : participants.length >= 7 && participants.length <= 9 ? (
+        // 7-9 people: 3x3 grid
+        <div className="w-full h-full grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 auto-rows-fr">
+          {participants.map((participant) => (
+            <VideoTile key={participant.id} participant={participant} isLocal={participant.id === localUserId} onPin={() => setPinnedUserId(participant.id)} />
+          ))}
+        </div>
+      ) : participants.length >= 10 ? (
+        // 10+ people: 4 columns grid
+        <div className="w-full h-full grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 auto-rows-fr overflow-y-auto">
+          {participants.map((participant) => (
+            <VideoTile key={participant.id} participant={participant} isLocal={participant.id === localUserId} onPin={() => setPinnedUserId(participant.id)} />
+          ))}
+        </div>
+      ) : (
+        // 1 person: centered
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-full max-w-4xl">
+            {participants.map((participant) => (
+              <VideoTile key={participant.id} participant={participant} isLocal={participant.id === localUserId} />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -254,13 +150,12 @@ export function VideoGrid({
 
 interface VideoTileProps {
   participant: VideoParticipant;
-  isLocal: boolean;
-  onPin: () => void;
+  isLocal?: boolean;
+  onPin?: () => void;
   isPinned?: boolean;
-  size?: "small" | "medium" | "large";
 }
 
-function VideoTile({ participant, onPin, isPinned, isLocal }: VideoTileProps) {
+function VideoTile({ participant, isLocal, onPin, isPinned }: VideoTileProps) {
   const [hovered, setHovered] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -297,18 +192,21 @@ function VideoTile({ participant, onPin, isPinned, isLocal }: VideoTileProps) {
   return (
     <div
       className={cn(
-        "relative w-full h-full overflow-hidden bg-[#1a2535] group transition-all duration-300",
-        participant.isSpeaking && "ring-2 ring-green-500"
+        "relative w-full h-full rounded-lg overflow-hidden bg-[#1a2535] transition-all duration-300",
+        participant.isSpeaking && "ring-4 ring-green-500",
+        hovered && onPin && "ring-2 ring-white/50",
+        onPin && "cursor-pointer"
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => onPin?.()}
     >
       {/* Video / Avatar */}
       {participant.isVideoOff || !participant.stream ? (
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className={cn(
-              "w-20 h-20 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-2xl font-semibold",
+              "w-16 h-16 md:w-24 md:h-24 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-xl md:text-3xl font-semibold shadow-lg",
               getAvatarColor(participant.username)
             )}
           >
@@ -325,29 +223,70 @@ function VideoTile({ participant, onPin, isPinned, isLocal }: VideoTileProps) {
         />
       )}
 
-      {/* Speaking indicator */}
-      {participant.isSpeaking && (
-        <div className="absolute top-3 right-3 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+      {/* Pin button - show on hover or if pinned */}
+      {(hovered || isPinned) && onPin && (
+        <div className="absolute top-2 md:top-3 left-2 md:left-3 z-10">
+          <button
+            className="bg-black/70 hover:bg-black/90 p-1.5 md:p-2 rounded-full transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPin();
+            }}
+          >
+            {isPinned ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="md:w-5 md:h-5">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            ) : (
+              <span className="text-white text-sm md:text-base">📌</span>
+            )}
+          </button>
+        </div>
       )}
 
-      {/* Name */}
-      <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-md backdrop-blur-sm">
-        <span className="text-white text-sm font-medium">
-          {participant.username}
-        </span>
+      {/* Muted indicator */}
+      {participant.isMuted && (
+        <div className="absolute top-2 md:top-3 right-2 md:right-3 bg-red-500/90 p-1.5 md:p-2 rounded-full shadow-lg">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="md:w-4 md:h-4"
+          >
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        </div>
+      )}
+
+      {/* Speaking indicator */}
+      {participant.isSpeaking && !participant.isMuted && (
+        <div className="absolute top-2 md:top-3 right-2 md:right-3 w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full animate-pulse shadow-lg" />
+      )}
+
+      {/* Name label */}
+      <div className="absolute bottom-2 md:bottom-3 left-2 md:left-3 right-2 md:right-3">
+        <div className="bg-black/70 px-2 md:px-3 py-1 md:py-1.5 rounded-md backdrop-blur-sm">
+          <span className="text-white text-xs md:text-sm font-medium truncate block">
+            {participant.username}
+          </span>
+        </div>
       </div>
 
-      {/* Pin button */}
-      {(hovered || isPinned) && (
-        <div className="absolute top-3 left-3">
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/80"
-            onClick={onPin}
-          >
-            📌
-          </Button>
+      {/* Local badge */}
+      {isLocal && !isPinned && (
+        <div className="absolute top-2 md:top-3 left-2 md:left-3 bg-blue-500/90 px-2 py-1 rounded-md shadow-lg">
+          <span className="text-white text-xs font-semibold">YOU</span>
         </div>
       )}
     </div>

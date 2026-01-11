@@ -22,21 +22,23 @@ export function ParticipantsList({ roomId }: ParticipantsListProps) {
                   {participant.avatar}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-foreground truncate">{participant.name}</p>
-                  <p className="text-xs text-muted-foreground">Joined {participant.joinedAt}</p>
+                  <p className="font-medium text-sm text-foreground truncate">{participant.username}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Joined {participant.joinedAt ? new Date(participant.joinedAt).toLocaleTimeString() : 'recently'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1 ml-10">
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    participant.status === "online"
+                    participant.isOnline
                       ? "bg-green-500"
-                      : participant.status === "away"
-                        ? "bg-yellow-500"
-                        : "bg-gray-500"
+                      : "bg-gray-500"
                   }`}
                 ></span>
-                <span className="text-xs text-muted-foreground capitalize">{participant.status}</span>
+                <span className="text-xs text-muted-foreground capitalize">
+                  {participant.isOnline ? 'online' : 'offline'}
+                </span>
               </div>
             </div>
           ))}
