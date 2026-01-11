@@ -40,12 +40,14 @@ export function useWebRTC({
       console.log('🎥 Requesting getUserMedia...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 640, max: 1280 },
+          height: { ideal: 480, max: 720 },
+          frameRate: { ideal: 24, max: 30 },
         },
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
+          autoGainControl: true,
         },
       });
 
@@ -214,7 +216,13 @@ export function useWebRTC({
     const peerData = peersRef.current.get(peerId);
     if (peerData) {
       console.log(`➖ Removing peer: ${peerId}`);
-      peerData.peer.destroy();
+      try {
+        if (!peerData.peer.destroyed) {
+          peerData.peer.destroy();
+        }
+      } catch (error) {
+        console.log('Peer already destroyed:', peerId);
+      }
       peersRef.current.delete(peerId);
       setPeers(prev => {
         const newPeers = new Map(prev);

@@ -189,6 +189,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
       
       // Handle WebRTC signaling
       if (data.type === "webrtc-signal" && webrtcSignalHandlerRef.current) {
+        console.log("📡 Received WebRTC signal from:", data.from, "type:", data.signal?.type);
         try {
           webrtcSignalHandlerRef.current(data);
         } catch (error) {
@@ -329,7 +330,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
         });
         
         // Establish WebRTC connection with the new user ONLY if we have a local stream
-        const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed' || room.type === 'text-video');
+        const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed');
         if (isVideoRoom && data.userId !== currentUserId) {
           if (webrtc.localStream) {
             try {
@@ -398,7 +399,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
   const existingUsersRef = useRef<any[]>([]);
   
   useEffect(() => {
-    const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed' || room.type === 'text-video');
+    const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed');
     console.log('🔍 Stream start check:', {
       isConnected,
       roomType: room?.type,
@@ -423,7 +424,7 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
 
   // Connect to existing peers when local stream becomes available
   useEffect(() => {
-    const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed' || room.type === 'text-video');
+    const isVideoRoom = room && (room.type === 'video' || room.type === 'mixed');
     
     if (isVideoRoom && webrtc.localStream && !hasConnectedToPeersRef.current && existingUsersRef.current.length > 0) {
       console.log('🎥 Local stream ready! Connecting to', existingUsersRef.current.length, 'existing users...');
@@ -775,8 +776,8 @@ export default function RoomPage({ params }: { params: { roomId: string } }) {
             isRefreshing={isRefreshingParticipants}
           />
         </div>
-      ) : roomData.type === "mixed" || roomData.type === "text-video" ? (
-        /* Mixed/text-video Room Layout (Combined) */
+      ) : roomData.type === "mixed" ? (
+        /* Mixed Room Layout (Combined) */
         <div className="h-full flex flex-col">
           {/* Top Header Bar */}
           <div className="h-14 flex items-center justify-between px-4 bg-[#1a1a1a] border-b border-white/10 shrink-0">

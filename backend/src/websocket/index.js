@@ -202,6 +202,8 @@ export async function setupWebSocket(app) {
               // Relay WebRTC signaling messages
               const { to, signal } = data;
               
+              console.log(`📨 WebRTC signal: from=${currentUserId} to=${to} type=${signal?.type}`);
+              
               if (!currentRoomId || !currentUserId) {
                 socket.send(JSON.stringify({
                   type: 'error',
@@ -213,21 +215,28 @@ export async function setupWebSocket(app) {
               // Find the target socket
               const roomSockets = roomConnections.get(currentRoomId);
               if (roomSockets) {
+                let found = false;
                 for (const clientSocket of roomSockets) {
                   if (clientSocket.userId === to) {
+                    found = true;
                     try {
                       clientSocket.send(JSON.stringify({
                         type: 'webrtc-signal',
                         from: currentUserId,
                         signal: signal
                       }));
-                      console.log(`🔄 Relayed WebRTC signal from ${currentUserId} to ${to}`);
+                      console.log(`✅ Relayed WebRTC signal from ${currentUserId} to ${to}`);
                     } catch (error) {
                       console.error('Error relaying WebRTC signal:', error);
                     }
                     break;
                   }
                 }
+                if (!found) {
+                  console.warn(`⚠️ Target user ${to} not found in room ${currentRoomId}`);
+                }
+              } else {
+                console.warn(`⚠️ Room ${currentRoomId} not found in connections`);
               }
               break;
             }
